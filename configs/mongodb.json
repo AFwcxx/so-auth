@@ -1,0 +1,19 @@
+{
+  "server": {
+    "development": {
+      "database": "so-auth",
+      "username": "",
+      "password": "",
+      "hostname": "localhost",
+      "port": "27017"
+    },
+    "production": {
+      "database": "so-auth",
+      "username": "",
+      "password": "",
+      "hostname": "",
+      "port": "27017"
+    }
+  },
+  "collections": ["access"]
+}
