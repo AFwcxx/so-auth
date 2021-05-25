@@ -6,11 +6,17 @@ window.verified = new Vue({
     responded: false,
     SoAuth: false,
     file: null,
-    fileSrc: false
+    fileSrc: false,
+    showMessageSpinner: false,
+    showUploadSpinner: false
   },
   methods: {
     onSubmit: function (event) {
+      this.showMessageSpinner = true;
+      let vm = this;
+
       this.SoAuth.exchange(this.message, '/secret').then(response => {
+        vm.showMessageSpinner = false;
         if (response) {
           this.responded = response;
         }
@@ -18,6 +24,7 @@ window.verified = new Vue({
     },
 
     upload: function (event) {
+      this.showUploadSpinner = true;
       const vm = this;
       const reader = new FileReader();
       reader.readAsDataURL(this.file);
@@ -29,6 +36,7 @@ window.verified = new Vue({
           size: vm.file.size,
           type: vm.file.type 
         }, '/media/upload').then(response => {
+          vm.showUploadSpinner = false;
           if (response) {
             if (response.success && response.rdata) {
               vm.fileSrc = vm.$root.$data.SoAuth.endpoint + 'private/download/' + response.rdata + '?soauth=' + vm.$root.$data.SoAuth.token;

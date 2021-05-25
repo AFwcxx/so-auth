@@ -28,7 +28,7 @@ router.post("*", function(req, res, next) {
   }
 });
 
-router.post("/media/upload", function(req, res, next) {
+router.post("/upload", function(req, res, next) {
   let response = {
     success: false,
     message: 'Insufficient data received'

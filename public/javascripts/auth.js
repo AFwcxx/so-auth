@@ -9,9 +9,14 @@ window.auth = new Vue({
       hasError: false
     },
     SoAuth: false,
+    showSpinner: false
   },
   methods: {
     submit: function (intention) {
+      this.showSpinner = true;
+
+      let vm = this;
+
       // Used to create deterministic signing keys
       let credential = {
         email: this.form.email,
@@ -24,6 +29,7 @@ window.auth = new Vue({
       };
 
       this.SoAuth.negotiate(credential, intention, meta).then(response => {
+        vm.showSpinner = false;
         if (response && response.token !== undefined) {
           this.SoAuth.save();
           window.location.replace("?soauth=" + response.token);
