@@ -74,10 +74,10 @@ class _SoAuth {
 
         if (message.boxPublicKey !== undefined) {
           if (typeof message.boxPublicKey === 'string') {
-            message.boxPublicKey = this.sodium.from_hex(message.boxPublicKey);
+            this.cliqueBoxPublicKey = this.sodium.from_hex(message.boxPublicKey);
+          } else {
+            this.cliqueBoxPublicKey = message.boxPublicKey;
           }
-
-          this.cliqueBoxPublicKey = message.boxPublicKey;
 
           return message;
         }
@@ -143,12 +143,12 @@ class _SoAuth {
         this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
         this.signkeypair = await this.sodium.crypto_sign_seed_keypair(signSeed);
 
-        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey) });
+        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey), message: message });
         let creation = false;
 
         if (message.intention === 'register' && findExist === false) {
           creation = await Access.create({
-            boxPublicKey: this.sodium.to_hex(message.boxPublicKey),
+            boxPublicKey: message.boxPublicKey,
             signPublicKey: this.sodium.to_hex(clique.signPublicKey),
             selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
@@ -157,7 +157,7 @@ class _SoAuth {
         } else if (message.intention === 'login' && findExist !== false) {
           creation = await Access.update({
             _id: findExist._id,
-            boxPublicKey: this.sodium.to_hex(message.boxPublicKey),
+            boxPublicKey: message.boxPublicKey,
             selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
             token: this.cliqueToken

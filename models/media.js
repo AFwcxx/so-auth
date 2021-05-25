@@ -77,8 +77,6 @@ function uploadBase64(params, res, next) {
         // Check if same file has already been uploaded, and just return the result
         findOne({ 'metadata.hash': hash }).then(result => {
           if (result) {
-            console.log('use exists');
-
             response.success = true;
             response.message = 'Uploaded';
             response.rdata = result._id;
@@ -91,8 +89,6 @@ function uploadBase64(params, res, next) {
               res.json(response);
             }
           } else {
-            console.log('use new');
-
             let bitmap = new Buffer(base64_data, 'base64');
 
             let filepath = path.join(__dirname, '../private/uploads/' + objectid + '.' + ext);

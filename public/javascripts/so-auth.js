@@ -100,10 +100,11 @@ class SoAuth {
 
         if (message.boxPublicKey !== undefined && message.token !== undefined) {
           if (typeof message.boxPublicKey === 'string') {
-            message.boxPublicKey = sodium.from_hex(message.boxPublicKey);
+            this.cliqueBoxPublicKey = sodium.from_hex(message.boxPublicKey);
+          } else {
+            this.cliqueBoxPublicKey = message.boxPublicKey;
           }
 
-          this.cliqueBoxPublicKey = message.boxPublicKey;
           this.token = message.token;
 
           return message;

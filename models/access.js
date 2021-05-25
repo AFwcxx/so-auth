@@ -67,10 +67,38 @@ async function update(params) {
 }
 
 async function findOne(params) {
+  let message = false;
+  if (typeof params.message === 'object') {
+    message = params.message;
+    delete params.message;
+  }
+
   let findData = await db.collection("access").findOne(params);
 
   if (findData !== null) {
+    if (typeof message === 'object') {
+      // This is called from SoAuth middleware - treat as an event of the following case
+      if (message.intention === 'register') {
+        // Register fail
+        console.log('REGISTER FAIL');
+      } else if (message.intention === 'login') {
+        // Login success
+        console.log('LOGIN SUCCESS');
+      }
+    }
+
     return findData;
+  }
+
+  if (typeof message === 'object') {
+    // This is called from SoAuth middleware - treat as an event of the following case
+    if (message.intention === 'register') {
+      // Register success
+      console.log('REGISTER SUCCESS');
+    } else if (message.intention === 'login') {
+      // Login fail
+      console.log('LOGIN FAIL');
+    }
   }
 
   return false;
