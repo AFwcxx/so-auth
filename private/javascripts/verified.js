@@ -46,6 +46,10 @@ window.verified = new Vue({
           }
         });
       }
+    },
+
+    reload: function (event) {
+      window.location.reload();
     }
   },
   created: function() {

@@ -44,6 +44,7 @@
     <div id="app">
       <b-container>
         <div>
+          <b-button variant="danger" class="mb-4" v-on:click="reload">Logout</b-button>
           <b-card-group deck>
             <b-card
               header="{{ title }}"
@@ -78,6 +79,9 @@
                   <br>
                   <b-button v-on:click="upload"><b-spinner small v-if="showUploadSpinner"></b-spinner> Upload</b-button>
                   <hr>
+                  <a v-if="fileSrc" v-bind:href="fileSrc" target="_blank" v-text="fileSrc"></a>
+                  <br>
+                  <br>
                   <img v-if="fileSrc" v-bind:src="fileSrc" width="100%" height="100%"/>
                 </div>
               </b-form>
