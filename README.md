@@ -187,7 +187,9 @@ soAuth.load().then(good => {
   }
 });
 
-soAuth.exchange('How many cups of sugar does it takes to get to the moon?', '/secret').then(response => {
+// If exchange is use multiple times, it might conflict on the current stored object variable
+// Use `clone`
+soAuth.clone().exchange('How many cups of sugar does it takes to get to the moon?', '/secret').then(response => {
   if (response) {
     alert('Server said: ' + response);
   } else {
