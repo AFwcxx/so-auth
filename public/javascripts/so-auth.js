@@ -203,7 +203,11 @@ class SoAuth {
     let url = new URL(endpoint);
 
     if (options.pathname !== undefined) {
-      url.pathname = options.pathname;
+      if (options.pathname.includes("soauth")) {
+        url.pathname = options.pathname;
+      } else {
+        url.pathname = url.pathname.replace(/\/+$/, "") + options.pathname;
+      }
     }
 
     if (message !== false) {
