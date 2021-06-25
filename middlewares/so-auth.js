@@ -109,7 +109,7 @@ class _SoAuth {
     return this.relay;
   }
 
-  async probe(clique) {
+  async probe(clique, req, res, next) {
     if (
       typeof clique === 'object'
       && clique.signature !== undefined
@@ -143,7 +143,7 @@ class _SoAuth {
         this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
         this.signkeypair = await this.sodium.crypto_sign_seed_keypair(signSeed);
 
-        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey), message: message });
+        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey), message: message }, req, res, next);
         let creation = false;
 
         if (message.intention === 'register' && findExist === false) {
@@ -153,7 +153,7 @@ class _SoAuth {
             selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
             token: this.cliqueToken
-          });
+          }, req, res, next);
         } else if (message.intention === 'login' && findExist !== false) {
           creation = await Access.update({
             _id: findExist._id,
@@ -161,7 +161,7 @@ class _SoAuth {
             selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
             token: this.cliqueToken
-          });
+          }, req, res, next);
         } else {
           return false;
         }
@@ -265,7 +265,7 @@ router.all('/soauth', function(req, res, next) {
       SoAuth.probe({
         signature: req.body.signature,
         signPublicKey: req.body.signPublicKey
-      }).then(introduce => {
+      }, req, res, next).then(introduce => {
         res.json(introduce);
       });
     });

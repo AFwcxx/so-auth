@@ -106,20 +106,20 @@ For example:
 // The meta parameter below is where you can use the data such as registration data - firstname, lastname, email, username and etc sent from the client.
 // By default meta will be an empty object
 
-Promise bool function create(Object params)
+Promise bool function create(Object params, Router req, Router, res, Router next)
   String params.boxPublicKey
   String params.signPublicKey
   String params.selfSeed
   String params.token
   Object params.meta
 
-Promise bool function update(Object params)
+Promise bool function update(Object params, Router req, Router, res, Router next)
   String params.boxPublicKey
   String params.selfSeed
   String params.token
   Object params.meta
 
-Promise Object function findOne(Object params)
+Promise Object function findOne(Object params, Router req, Router, res, Router next)
   String params.signPublicKey
   or
   String params.token
