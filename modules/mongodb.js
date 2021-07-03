@@ -1,9 +1,6 @@
 const MongoClient = require('mongodb').MongoClient;
 const mongoConfig = require('../configs/mongodb.json');
 const mongo = require('mongodb');
-const gridfs = require('gridfs-stream');
-// Patch: https://github.com/aheckmann/gridfs-stream/issues/125#issuecomment-376446255
-eval(`gridfs.prototype.findOne = ${gridfs.prototype.findOne.toString().replace('nextObject', 'next')}`);
 
 exports.getClient = getClient;
 exports.getGfs = getGfs;
@@ -116,5 +113,5 @@ function setupCollections() {
 }
 
 function createGfs() {
-  return gridfs(getClient(), mongo);
+  return new mongo.GridFSBucket(getClient());
 }

@@ -1,7 +1,5 @@
-// https://github.com/aheckmann/gridfs-stream
-
+var createError = require('http-errors');
 var path = require('path');
-const { ObjectId } = require('mongodb');
 const mongo = require('../modules/mongodb');
 const db = mongo.getClient();
 const fs = require('fs');
@@ -41,11 +39,6 @@ async function findOne(params) {
 }
 
 function uploadBase64(params, res, next) {
-  let response = {
-    success: false,
-    message: 'Insufficient data received'
-  };
-
   let maximumFilesize = 10 ** 8; // 100 MB
 
   // Check data received
@@ -62,43 +55,47 @@ function uploadBase64(params, res, next) {
       // Check size
       if (params.size <= maximumFilesize) {
         let gfs = mongo.getGfs();
-        let objectid = new ObjectId();
 
-        //Find extension of file
+        // Find extension of file
         let baseImage = params.file;
-        let ext = baseImage.substring(baseImage.indexOf("/")+1, baseImage.indexOf(";base64"));
+        let ext = baseImage.substring(baseImage.indexOf("/") + 1, baseImage.indexOf(";base64"));
         let fileType = baseImage.substring("data:".length,baseImage.indexOf("/"));
         //Forming regex to extract base64 data of file.
         let regex = new RegExp(`^data:${fileType}\/${ext};base64,`, 'gi');
-        //Extract base64 data.
+        // Extract base64 data.
         let base64_data = baseImage.replace(regex, "");
         let hash = sha256(base64_data).toString();
 
         // Check if same file has already been uploaded, and just return the result
         findOne({ 'metadata.hash': hash }).then(result => {
           if (result) {
-            response.success = true;
-            response.message = 'Uploaded';
-            response.rdata = result._id;
+            console.log('use exists');
 
             if (res.locals.SoAuth !== undefined) {
-              res.locals.SoAuth.encrypt(response).then(encrypted => {
+              res.locals.SoAuth.encrypt({
+                success: true,
+                message: 'Uploaded',
+                rdata: hash
+              }).then(encrypted => {
                 res.json(encrypted);
               });
             } else {
-              res.json(response);
+              res.json({
+                success: true,
+                message: 'Uploaded',
+                rdata: hash
+              });
             }
           } else {
-            let bitmap = new Buffer(base64_data, 'base64');
+            console.log('use new');
 
-            let filepath = path.join(__dirname, '../private/uploads/' + objectid + '.' + ext);
+            let bitmap = new Buffer.from(base64_data, 'base64');
+
+            let filepath = path.join(__dirname, '../private/uploads/' + hash + '.' + ext);
             fs.writeFileSync(filepath, bitmap);
 
-            let writestream = gfs.createWriteStream({ 
-              _id: objectid,
-              filename: params.name,
-              mode: 'w',
-              content_type: params.type,
+            let writestream = gfs.openUploadStream(params.name, { 
+              contentType: params.type,
               metadata: {
                 owner: params.owner,
                 hash: hash
@@ -115,16 +112,20 @@ function uploadBase64(params, res, next) {
                   }
                 });
 
-                response.success = true;
-                response.message = 'Uploaded';
-                response.rdata = objectid;
-
                 if (res.locals.SoAuth !== undefined) {
-                  res.locals.SoAuth.encrypt(response).then(encrypted => {
+                  res.locals.SoAuth.encrypt({
+                    success: true,
+                    message: 'Uploaded',
+                    rdata: hash
+                  }).then(encrypted => {
                     res.json(encrypted);
                   });
                 } else {
-                  res.json(response);
+                  res.json({
+                    success: true,
+                    message: 'Uploaded',
+                    rdata: hash
+                  });
                 }
               })
               .on('error', function(err) {
@@ -135,15 +136,13 @@ function uploadBase64(params, res, next) {
           }
         });
       } else {
-        response.message = 'Filesize exceed limit: ' + (maximumFilesize / 10 ** 6) + 'MB';
-        res.status(406).json(response);
+        next(createError(406, 'Filesize exceed limit: ' + (maximumFilesize / 10 ** 6) + 'MB'));
       }
     } else {
-      response.message = 'Invalid media type';
-      res.status(406).json(response);
+      next(createError(406, 'Invalid media type'));
     }
   } else {
-    res.status(406).json(response);
+    next(createError(406, 'Insufficient data received'));
   }
 }
 

@@ -101,19 +101,30 @@ async function findOne(params) {
   return false;
 }
 
-function mediaFetchController(req, res, next) {
+function mediaFetchController(req, res, next, options) {
   if (req.params.mediaId !== undefined) {
     let gfs = mongo.getGfs();
 
-    gfs.findOne({ _id: req.params.mediaId }, function (err, file) {
+    db.collection("fs.files").findOne({ 'metadata.hash': req.params.mediaId }, function (err, file) {
       if (err || file === null) {
         next();
       } else {
-        res.set('Content-Type', file.contentType);
+        let goFlag = true;
+        if (options.owner && options.owner !== 'public') {
+          if (options.owner !== file.metadata.owner) {
+            goFlag = false;
+          }
+        }
 
-        gfs
-          .createReadStream({ _id: req.params.mediaId })
-          .pipe(res);
+        if (goFlag) {
+          res.set('Content-Type', file.contentType);
+
+          gfs
+            .openDownloadStream(file._id)
+            .pipe(res);
+        } else {
+          next();
+        }
       }
     });
   } else {
