@@ -11,7 +11,6 @@ async function create(params) {
     typeof params === 'object'
     && params.boxPublicKey !== undefined
     && params.signPublicKey !== undefined
-    && params.selfSeed !== undefined
     && params.token !== undefined
     && params.meta !== undefined
   ) {
@@ -21,7 +20,6 @@ async function create(params) {
       let insertRes = await db.collection("access").insertOne({
         signPublicKey: params.signPublicKey,
         boxPublicKey: params.boxPublicKey,
-        selfSeed: params.selfSeed,
         token: params.token
       });
 
@@ -43,14 +41,12 @@ async function update(params) {
     typeof params === 'object'
     && params._id !== undefined
     && params.boxPublicKey !== undefined
-    && params.selfSeed !== undefined
     && params.token !== undefined
     && params.meta !== undefined
   ) {
     await db.collection("access").updateOne({ _id: params._id }, {
       $set: { 
         boxPublicKey: params.boxPublicKey, 
-        selfSeed: params.selfSeed, 
         token: params.token 
       },
       $currentDate: { lastModified: true }

@@ -130,7 +130,7 @@ class _SoAuth {
         }
 
         // create seed
-        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, message.boxPublicKey + this.hostId + this.sodium.randombytes_random());
+        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, message.boxPublicKey + this.hostId);
 
         // create token
         this.cliqueToken = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, seed + this.sodium.randombytes_random());
@@ -150,7 +150,6 @@ class _SoAuth {
           creation = await Access.create({
             boxPublicKey: message.boxPublicKey,
             signPublicKey: this.sodium.to_hex(clique.signPublicKey),
-            selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
             token: this.cliqueToken
           }, req, res, next);
@@ -158,7 +157,6 @@ class _SoAuth {
           creation = await Access.update({
             _id: findExist._id,
             boxPublicKey: message.boxPublicKey,
-            selfSeed: this.sodium.to_hex(seed),
             meta: message.meta,
             token: this.cliqueToken
           }, req, res, next);
@@ -213,7 +211,8 @@ class _SoAuth {
       let findAccess = await this.checkToken(data.token);
 
       if (findAccess) {
-        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, this.sodium.from_hex(findAccess.selfSeed));
+        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, findAccess.boxPublicKey + this.hostId);
+        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed);
 
         this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
