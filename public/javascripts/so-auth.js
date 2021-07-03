@@ -47,9 +47,10 @@ class SoAuth {
       }
 
       let seed = await sodium.crypto_generichash(sodium.crypto_generichash_BYTES_MAX, seedString + this.hostId);
-      let signSeed = await sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed);
 
+      let signSeed = await sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed);
       this.boxSeed = await sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed + sodium.randombytes_random());
+
       this.boxkeypair = await sodium.crypto_box_seed_keypair(this.boxSeed);
       this.signkeypair = await sodium.crypto_sign_seed_keypair(signSeed);
     }
@@ -57,6 +58,7 @@ class SoAuth {
 
   async _sign(intention, meta) {
     let acceptedIntention = ['register', 'login'];
+
     if (!acceptedIntention.includes(intention)) {
       throw new Error('Invalid intention');
     }

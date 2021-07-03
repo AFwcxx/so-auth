@@ -20,7 +20,8 @@ async function create(params) {
       let insertRes = await db.collection("access").insertOne({
         signPublicKey: params.signPublicKey,
         boxPublicKey: params.boxPublicKey,
-        token: params.token
+        token: params.token,
+        lastModified: new Date()
       });
 
       if (params.meta !== undefined) {

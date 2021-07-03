@@ -129,18 +129,15 @@ class _SoAuth {
           return false;
         }
 
-        // create seed
+        // create seed - we want this seed to always be different in each new client signing process so it can never be replayed
         let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, message.boxPublicKey + this.hostId);
 
         // create token
         this.cliqueToken = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, seed + this.sodium.randombytes_random());
         this.cliqueToken = this.sodium.to_hex(this.cliqueToken);
 
-        // create keypairs
-        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed);
+        // create signature keypairs
         let signSeed = await this.sodium.crypto_generichash(this.sodium.crypto_sign_SEEDBYTES, seed);
-
-        this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
         this.signkeypair = await this.sodium.crypto_sign_seed_keypair(signSeed);
 
         let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey), message: message }, req, res, next);
@@ -167,6 +164,12 @@ class _SoAuth {
         if (!creation) {
           return false;
         }
+
+        // Create the session authentication key pairs
+        let accessData = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey) });
+
+        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + accessData.lastModified.getTime());
+        this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
         return await this._introduce(message.intention);
       }
@@ -212,8 +215,8 @@ class _SoAuth {
 
       if (findAccess) {
         let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, findAccess.boxPublicKey + this.hostId);
-        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed);
 
+        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + findAccess.lastModified.getTime());
         this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
         let decrypted = await this.sodium.crypto_box_open_easy(data.ciphertext, data.nonce, this.sodium.from_hex(findAccess.boxPublicKey), this.boxkeypair.privateKey);
