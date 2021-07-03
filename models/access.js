@@ -110,7 +110,8 @@ function mediaFetchController(req, res, next, options) {
         next();
       } else {
         let goFlag = true;
-        if (options.owner && options.owner !== 'public') {
+
+        if (options && options.owner && options.owner !== 'public') {
           if (options.owner !== file.metadata.owner) {
             goFlag = false;
           }
