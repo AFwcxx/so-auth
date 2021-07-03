@@ -1,9 +1,11 @@
-#  SoAuth - Remove the need to store password or private key
+# SoAuth - Remove the need to store password or private key
+
 This is a BootstrapVue demo that runs SoAuth NodeJS server with full privacy and secure communication.
 It only covers the authentication aspects. User and permissions are separate scope but can easily be integrated with.
 
 
 ## Concept
+
 - Signing: 
   - Process of registration and login. Login requires you to prove yourself without having to share username, email or password.
   - Signing keys are deterministic, suitable to identify an entity.
@@ -16,30 +18,32 @@ It only covers the authentication aspects. User and permissions are separate sco
 
 
 ### Signing
+
 Process flow:
 1. Client's Username and password is used to generate deterministic Signing keys and random Authentication keys.
-2. Client signed intention (login or register) data with Signing private key and send to server for negotiation. Signing and Authentication public key is shared during the negotiation.
+2. Client signed intention (login or register) data with Signing private key and send to server for negotiation. Signing and Authentication public keys are shared during the negotiation.
 3. Server probe the intention data with the received Signing public key and process the intention.
-4. Server generate itself a new sets of random Signing and Authentication keys; and random generated token. 
-5. Server signed introduction data (contains token) with Signing private key and send back to the Client by sharing Signing and Authentication public key.
-5. Client probe the introduction data, remove the existence of it's own Singing keys from memory and ready to begin encrypted communication - Authentication process.
+4. Server generate itself a new sets of deterministic Signing and random Authentication keys; Random generated token is also created and should be strictly used to retrieve static private files, not to be used for data or message exchange. 
+5. Server signed introduction data that consists of signature (contains token and Authentication public key) and Signing public key with Signing private key and send back to the Client.
+5. Client probe the introduction data, remove the existence of it's own Singing keys from memory and ready to begin encrypted communication that only uses Authentication keys for data or message exchange and token for static private files retrieval from this point onwards.
 
 ### Authentication
+
 Process flow:
-1. Client encrypt data with Authentication private key and send to server which contains a ciphertext, nonce and token.
-2. Server receives the payload and check again if the token received is the same with the Authentication public key it had received previously.
+1. Client encrypt data or message with Authentication private key and send to server which contains a ciphertext, nonce and token.
+2. Server receives the payload and check again if the token received is the same with the Authentication public key it had received previously. This token is redundant and strictly just for session and do not provide any benefit or part of the encryption.
 3. Server decrypt the ciphertext with nonce and Client's Authentication public key, process it's request, encrypt the response and send back to Client.
 4. Client receives the payload, decrypt the ciphertext with nonce and Server's Authentication public key.
 5. Repeat.
-
-Note: SoAuth also support static files privacy out of the box that uses the token for identity check after Signing process. This is explained below.
 
 
 ## Specifications
 
 ### Demo File structure
+
 You don't really need Bootstrap, Vue or MongoDB as shown by the demo. It is just to illustrate how to perform integration with different tech stack.
-The structure below is an example except for the `private` folder which is used specifically by SoAuth to filter viewers.
+The structure below is an example except for the `private` folder which is used specifically by SoAuth to allow private static files accessible exclusively by token holders.
+
 ```
 ├── bin
 | └── www : NodeJS executable file
@@ -56,11 +60,11 @@ The structure below is an example except for the `private` folder which is used 
 |
 ├── modules
 | └── mongodb.js : MongoDB module
-| └── so-auth.js : SoAuth Server-toServer module
+| └── so-auth.js : SoAuth Server-to-Server module
 | └── tool.js : Misc module (JSON string checker and http/https)
 |
 ├── private
-| └── * : Everything that resides here requires token (verified Signing process) to access.
+| └── * : Everything that resides here requires token to access.
 |
 ├── public
 | └── * : Everything that resides here are for everyone to access
@@ -109,13 +113,11 @@ For example:
 Promise bool function create(Object params, Router req, Router, res, Router next)
   String params.boxPublicKey
   String params.signPublicKey
-  String params.selfSeed
   String params.token
   Object params.meta
 
 Promise bool function update(Object params, Router req, Router, res, Router next)
   String params.boxPublicKey
-  String params.selfSeed
   String params.token
   Object params.meta
 
