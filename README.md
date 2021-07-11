@@ -1,12 +1,19 @@
-# SoAuth - Remove the need to store password or private key
+# Sodium base authentication
+```
+ ____          _         _   _     
+/ ___|  ___   / \  _   _| |_| |__  
+\___ \ / _ \ / _ \| | | | __| '_ \ 
+ ___) | (_) / ___ \ |_| | |_| | | |
+|____/ \___/_/   \_\__,_|\__|_| |_|
+```
 
-This is a BootstrapVue demo that runs SoAuth NodeJS server with full privacy and secure communication.
+This is a demo on NodeJS (express) server with full privacy and secure communication.
 It only covers the authentication aspects. User and permissions are separate scope but can easily be integrated with.
 
 
 ## Concept
-The client already know the public identity of the server.
-The server should never store any client private credentials.
+1. The client already know the public identity of the server.
+2. The server should never store any client private credentials.
 
 There are 3 main keypoints:
 - Signing keys: Deterministic and never stored anywhere. Used as identity.
@@ -23,7 +30,7 @@ There are 3 main keypoints:
 | Receives the signature, use the server public key that it already has to validate whether the signature is really from the source it trusts. If valid, store the server box public key |  |  |
 | Negotation ends. Communication begins. |
 | Use it's own box private key and server box public key to encrypt message.<br />Send the ciphertext, nonce and token  |  | Use the token received to retrieve client box public key and try decrypt it with it's own box private key  |
-| | In total, it holds:<br/>The client's signing public key, box public key and token<br />The server's box public key | |
+| | **In total, it holds:**<br/><br />The client's signing public key, box public key and token<br /><br />The server's box public key | |
 
 The Man in the Middle:
 - Replaying the signing process with it's own signature to provide it's own box public key will only become a new identity since it cannot provide the client's signing public key (identity) and have a valid signature.
@@ -35,6 +42,7 @@ The Man in the Middle:
 ### Demo File structure
 
 You don't really need Bootstrap, Vue or MongoDB as shown by the demo. It is just to illustrate how to perform integration with different tech stack.
+
 The structure below is an example except for the `private` folder which is used specifically by SoAuth to allow private static files accessible exclusively by token holders.
 
 ```
@@ -80,27 +88,29 @@ The structure below is an example except for the `private` folder which is used 
 
 var soAuth = require('./middlewares/so-auth');
 app.use(soAuth({
-  hostId: hostId,
+  secret: 'super-secure-secret',
   handler: require('./models/access')
 }));
 
-// hostId: 
-// - Any string to identify your service. Can be different value for different redundancy server.
-//
-// handler: 
-// - An object function to manage the SoAuth client data, it can also be used as a "bridge" to create reference to your own model.
-// - This can be anything really for as long as the requirement is fulfilled.
+/*
+handler: 
+- An object function to manage the SoAuth client data, it can also be used as a "bridge" to create reference to your own model.
+- This can be anything really for as long as the requirement is fulfilled.
+
+When the server starts, it will display the signing public key in the console.
+*/
 ```
 
 #### Handler requirements
-Since the handler is for you to provide, it means you have the freedom to scale this to whatever you wish, besides storing the client data.
+Since the handler is for you to provide, it means you have the freedom to scale this to whatever you wish, besides storing the client's metadata.
+
 For example:
 - Creating an OTP procedure
-- Detect if the client is accessed on different device by using agent information into the Signing key creation
+- Detect if the client is accessed on different device by using agent information
 - Create reference between your user model and the `signPublicKey`
 
 ```js
-// The meta parameter below is where you can use the data such as registration data - firstname, lastname, email, username and etc sent from the client.
+// The meta parameter below is where you can use information such as registration data - firstname, lastname, email, username and etc sent from the client.
 // By default meta will be an empty object
 
 Promise bool function create(Object params, Router req, Router, res, Router next)
@@ -115,6 +125,7 @@ Promise bool function update(Object params, Router req, Router, res, Router next
   Object params.meta
 
 Promise Object function findOne(Object params, Router req, Router, res, Router next)
+  Object params.message // only in negotation phase
   String params.signPublicKey
   or
   String params.token
@@ -130,7 +141,7 @@ Promise Object function findOne(Object params, Router req, Router, res, Router n
 <script src="../javascripts/so-auth.js"></script>
 <script>
 var soAuth = new SoAuth({
-  hostId: 'localhost:3000-soAuth',
+  hostSignPublicKey: 'server-signing-public-key',
   endpoint: 'http://localhost:3000/'
 });
 </script>
@@ -144,10 +155,11 @@ var soAuth = new SoAuth({
 // Client:
 
 // The credential can be anything, just remember that it is used to create a deterministic signing key
+// Changing it's structure, format or data will create different key pairs
 // So you'll have to think ahead for your use-case
 let credential = {
   email: 'jondoe@email.com',
-  password: 'super-secure'
+  password: 'super-secure-password'
 };
 
 // Optional 
@@ -216,14 +228,14 @@ app.post("/secret", function(req, res, next) {
 // Generating a server public key box
 const _SoAuth = require('/path/to/module/so-auth').SoAuth;
 
-SoAuth = new _SoAuth({
-  passphrase: 'very-secret',
-});
+let SoAuth = new _SoAuth('super-secret-passphrase');
 
 SoAuth.setup().then(() => {
-  let boxPublicKey = SoAuth.sodium.to_hex(SoAuth.boxkeypair.publicKey);
-  console.log('SoAuth S2S ready, Box Public Key: ' + boxPublicKey)
+  let boxPublicKey = SoAuth.sodium.to_hex(SoAuth.boxKeypair.publicKey);
+  console.log('SoAuth S2S Box Public Key: ' + boxPublicKey)
 });
+
+// When the server starts, it will display the box public key in the console.
 ```
 
 ```js
@@ -247,9 +259,7 @@ let config = {
 // Send encrypted data
 const _SoAuth = require('/path/to/module/so-auth').SoAuth;
 
-SoAuth = new _SoAuth({
-  passphrase: config.passphrase,
-});
+let SoAuth = new _SoAuth(config.passphrase);
 
 SoAuth.setup().then(() => {
   SoAuth.cliqueBoxPublicKey = SoAuth.sodium.from_hex(config.cliqueBoxPublicKey['server-c']);
@@ -283,9 +293,7 @@ let config = {
 // Send encrypted data
 const _SoAuth = require('/path/to/module/so-auth').SoAuth;
 
-SoAuth = new _SoAuth({
-  passphrase: config.passphrase,
-});
+let SoAuth = new _SoAuth(config.passphrase);
 
 SoAuth.setup().then(() => {
   SoAuth.cliqueBoxPublicKey = SoAuth.sodium.from_hex(config.cliqueBoxPublicKey['server-c']);
@@ -319,9 +327,7 @@ let config = {
 // Response to server accordingly
 const _SoAuth = require('/path/to/module/so-auth').SoAuth;
 
-SoAuth = new _SoAuth({
-  passphrase: config.passphrase,
-});
+let SoAuth = new _SoAuth(config.passphrase);
 
 SoAuth.setup().then(() => {
   // req.body.name is the body request data in Express

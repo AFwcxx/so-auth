@@ -6,13 +6,12 @@ exports.update = update;
 exports.findOne = findOne;
 exports.mediaFetchController = mediaFetchController;
 
-async function create(params) {
+async function create(params, req, res, next) {
   if (
     typeof params === 'object'
     && params.boxPublicKey !== undefined
     && params.signPublicKey !== undefined
     && params.token !== undefined
-    && params.meta !== undefined
   ) {
     let foundOne = await findOne({ signPublicKey: params.signPublicKey });
 
@@ -37,7 +36,7 @@ async function create(params) {
   throw new Error('Insufficient parameter received');
 }
 
-async function update(params) {
+async function update(params, req, res, next) {
   if (
     typeof params === 'object'
     && params._id !== undefined
@@ -62,7 +61,7 @@ async function update(params) {
   throw new Error('Insufficient parameter received');
 }
 
-async function findOne(params) {
+async function findOne(params, req, res, next) {
   let message = false;
   if (typeof params.message === 'object') {
     message = params.message;
