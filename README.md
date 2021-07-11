@@ -16,26 +16,31 @@ It only covers the authentication aspects. User and permissions are separate sco
 2. The server should never store any client private credentials.
 
 There are 3 main keypoints:
-- Signing keys: Deterministic and never stored anywhere. Used as identity.
-- Box keys: Random on every negotation. Used as encrypted communication. Optional to stored in local storage for persistent.
-- Token: Random on every negotation. Used to retrieve private static files and as a session only.
+- **Signing keys:** Deterministic and never stored anywhere. Used as identity.
+- **Box keys:** Random on every negotation. Used as encrypted communication. Optional to stored in local storage for persistent.
+- **Token:** Random on every negotation. Used to retrieve private static files and as a session only.
 
 
 ## Flow
 |  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
 | ------------- | ------------- |------------- |
-|  |  | Generate signing keypairs and share the public key to all clients |
-| Has the server signing public key. <br />Generate seed from input and create deterministic signing key pairs. <br />Generate random seed for box key pairs.<br />Create a message that consists of it's box public key.<br />Sign with it's own signing private key and send the signature and signing public key as negotiation. | Has the client signature, signing public key and box public key  |  |
-|  | Has the server signature and box public key. <br />Has the client token.  | Receives the negotation, validate the signature and signing public key.<br />If valid, generate it's own box key pairs and random token.<br />Create a message that consists of it's own box public key and random token.<br />Sign it with own signing private key and reply to the client with only the signature. |
-| Receives the signature, use the server public key that it already has to validate whether the signature is really from the source it trusts. If valid, store the server box public key |  |  |
+|  |  | Generate signing key pairs and share the signing public key to all clients. |
+| Has the server signing public key. <br />Generate deterministic seed from inputs and signing key pairs, not stored. <br />Generate random seed for box key pairs and store locally.<br />Create a message that consists of it's box public key.<br />Sign the message with it's own signing private key and send the signature and signing public key as negotiation. | Has the client signature, signing public key and box public key  |  |
+|  |  | Receives the negotation, validate the signature and signing public key.<br />If valid, generate it's own box key pairs and random token.<br />Create a message that consists of it's own box public key and random token.<br />Sign it with own signing private key and reply to the client with only the signature. |
+| Receives the signature, use the server public key that it already has to validate whether the signature is really from the source it trusts. If valid, store the server box public key | Has the server signature and box public key. <br />Has the client token.  |  |
 | Negotation ends. Communication begins. |
 | Use it's own box private key and server box public key to encrypt message.<br />Send the ciphertext, nonce and token  |  | Use the token received to retrieve client box public key and try decrypt it with it's own box private key  |
 | | **In total, it holds:**<br/><br />The client's signing public key, box public key and token<br /><br />The server's box public key | |
 
 The Man in the Middle:
 - Replaying the signing process with it's own signature to provide it's own box public key will only become a new identity since it cannot provide the client's signing public key (identity) and have a valid signature.
-- Passing the client's token with it's own ciphertext and nonce (using it's own box keypairs) in the communication will only make the server to retrieve the access data but will not able to decrypt the ciphertext with the access data box public key.
+- Passing the client's token with it's own ciphertext and nonce (using it's own box key pairs) in the communication will only make the server to retrieve the access data but will not able to decrypt the ciphertext with the access data box public key.
 - Since the token lifetime is until the next signing process, token should NEVER be used to retrieve sensitive information. Only static files such as javascript, stylesheet or html in private scope.
+
+Persistent mode:
+- Client uses local storage to store the box key pairs. Never the signing key pairs.
+- Box key pairs lifetime is until the next signing process or when the local storage is cleared.
+- If the local storage is compromised and box key pairs is stolen, logout or re-negotiate.
 
 ## Specifications
 
