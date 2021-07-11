@@ -8,7 +8,8 @@ router.get('*', function(req, res, next) {
     });
   } else {
     res.render('auth', {
-      title: 'So-Auth'
+      title: 'So-Auth',
+      reset: req.query.soauth !== undefined
     });
   }
 });
