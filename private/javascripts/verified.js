@@ -15,7 +15,7 @@ window.verified = new Vue({
       this.showMessageSpinner = true;
       let vm = this;
 
-      this.SoAuth.exchange(this.message, '/secret').then(response => {
+      this.SoAuth.clone().exchange(this.message, '/secret').then(response => {
         vm.showMessageSpinner = false;
         if (response) {
           this.responded = response;
@@ -48,13 +48,17 @@ window.verified = new Vue({
       }
     },
 
-    reload: function (event) {
-      window.location.reload();
+    logout: function () {
+      this.SoAuth.logout().then(result => {
+        if (result) {
+          window.location.reload();
+        }
+      });
     }
   },
   created: function() {
     this.SoAuth = new SoAuth({
-      hostId: 'localhost:3000-sochain',
+      hostId: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
       endpoint: 'http://localhost:3000/'
     });
     this.SoAuth.load().then(good => {

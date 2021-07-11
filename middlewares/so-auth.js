@@ -1,31 +1,28 @@
 "use strict";
 
-/*
- * Scopes res.locals created:
- *
- * token - grab from "soauth" param/query/body
- * auth - SoAuth data
- * decrypted - SoAuth decrypted data
- * SoAuth - SoAuth object
- *
- */
-
 
 // ==== CLASS ====
 const _sodium = require('libsodium-wrappers');
+const express = require('express');
+const router = express.Router();
+const path = require('path');
+const url  = require('url');
+const fs = require('fs');
 
 var Access = false;
+var Config = {
+  secret: false,
+  signKeypair: false,
+};
 
 class _SoAuth {
-  constructor(hostId) {
-    this.boxkeypair = false;
-    this.signkeypair = false;
+  constructor(secret) {
+    this.boxKeypair = false;
 
-    this.relay = '';
-    this.cliqueToken = false;
-    this.cliqueBoxPublicKey = false;
+    this.clientToken = false;
+    this.clientBoxPublicKey = false;
 
-    this.hostId = hostId || 'super-secret';
+    this.secret = secret;
     this.sodium = false;
   }
 
@@ -72,18 +69,18 @@ class _SoAuth {
       if (unsigned) {
         let message = JSON.parse(this.sodium.to_string(unsigned));
 
-        if (message.boxPublicKey !== undefined) {
+        if (message.boxPublicKey !== undefined && message.serverSignPublicKey !== undefined) {
           if (typeof message.boxPublicKey === 'string') {
-            this.cliqueBoxPublicKey = this.sodium.from_hex(message.boxPublicKey);
+            this.clientBoxPublicKey = this.sodium.from_hex(message.boxPublicKey);
           } else {
-            this.cliqueBoxPublicKey = message.boxPublicKey;
+            this.clientBoxPublicKey = message.boxPublicKey;
           }
 
-          return message;
+          if (message.serverSignPublicKey === this.sodium.to_hex(Config.signKeypair.publicKey)) {
+            return message;
+          }
         }
       }
-
-      this.cliqueBoxPublicKey = false;
     }
     
     return false;
@@ -92,70 +89,60 @@ class _SoAuth {
   async _introduce(intention) {
     let message = this._refineMessage({
       intention: intention,
-      boxPublicKey: this.sodium.to_hex(this.boxkeypair.publicKey),
-      token: this.cliqueToken
+      boxPublicKey: this.sodium.to_hex(this.boxKeypair.publicKey),
+      token: this.clientToken
     });
 
-    let signature = await this.sodium.crypto_sign(this.sodium.from_string(message), this.signkeypair.privateKey);
+    let signature = await this.sodium.crypto_sign(this.sodium.from_string(message), Config.signKeypair.privateKey);
 
-    this.relay = {
-      signature: this.sodium.to_hex(signature),
-      signPublicKey: this.sodium.to_hex(this.signkeypair.publicKey)
+    return {
+      signature: this.sodium.to_hex(signature)
     };
-
-    // Done using
-    this.signkeypair = false;
-
-    return this.relay;
   }
 
-  async probe(clique, req, res, next) {
+  async probe(client, req, res, next) {
     if (
-      typeof clique === 'object'
-      && clique.signature !== undefined
-      && clique.signPublicKey !== undefined
+      typeof client === 'object'
+      && client.signature !== undefined
+      && client.signPublicKey !== undefined
     ) {
       if (!this.sodium) {
         throw new Error('Sodium not initialized');
       }
 
-      // authenticate the signed intention
-      let message = await this._validate(clique);
+      // authenticate the signed message
+      let message = await this._validate(client);
 
-      if (message !== false && this.cliqueBoxPublicKey !== false) {
+      if (message !== false && this.clientBoxPublicKey !== false) {
         let acceptedIntention = ['register', 'login'];
 
         if (!acceptedIntention.includes(message.intention)) {
           return false;
         }
 
-        // create seed - we want this seed to always be different in each new client signing process so it can never be replayed
-        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, message.boxPublicKey + this.hostId);
+        // create seed
+        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, Config.secret);
 
         // create token
-        this.cliqueToken = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, seed + this.sodium.randombytes_random());
-        this.cliqueToken = this.sodium.to_hex(this.cliqueToken);
+        this.clientToken = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, seed + this.sodium.randombytes_random());
+        this.clientToken = this.sodium.to_hex(this.clientToken);
 
-        // create signature keypairs
-        let signSeed = await this.sodium.crypto_generichash(this.sodium.crypto_sign_SEEDBYTES, seed);
-        this.signkeypair = await this.sodium.crypto_sign_seed_keypair(signSeed);
-
-        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey), message: message }, req, res, next);
+        let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(client.signPublicKey), message: message }, req, res, next);
         let creation = false;
 
         if (message.intention === 'register' && findExist === false) {
           creation = await Access.create({
             boxPublicKey: message.boxPublicKey,
-            signPublicKey: this.sodium.to_hex(clique.signPublicKey),
+            signPublicKey: this.sodium.to_hex(client.signPublicKey),
             meta: message.meta,
-            token: this.cliqueToken
+            token: this.clientToken
           }, req, res, next);
         } else if (message.intention === 'login' && findExist !== false) {
           creation = await Access.update({
             _id: findExist._id,
             boxPublicKey: message.boxPublicKey,
             meta: message.meta,
-            token: this.cliqueToken
+            token: this.clientToken
           }, req, res, next);
         } else {
           return false;
@@ -166,10 +153,11 @@ class _SoAuth {
         }
 
         // Create the session authentication key pairs
-        let accessData = await Access.findOne({ signPublicKey: this.sodium.to_hex(clique.signPublicKey) });
+        let accessData = await Access.findOne({ signPublicKey: this.sodium.to_hex(client.signPublicKey) });
 
+        // Always differ on every new session
         let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + accessData.lastModified.getTime());
-        this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
+        this.boxKeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
         return await this._introduce(message.intention);
       }
@@ -182,16 +170,14 @@ class _SoAuth {
   async encrypt(message) {
     message = this._refineMessage(message);
 
-    if (message && this.cliqueBoxPublicKey) {
+    if (message && this.clientBoxPublicKey) {
       let nonce = this.sodium.randombytes_buf(this.sodium.crypto_box_NONCEBYTES);
-      let ciphertext = await this.sodium.crypto_box_easy(message, nonce, this.cliqueBoxPublicKey, this.boxkeypair.privateKey);    
+      let ciphertext = await this.sodium.crypto_box_easy(message, nonce, this.clientBoxPublicKey, this.boxKeypair.privateKey);    
 
-      this.relay = {
+      return {
         ciphertext: this.sodium.to_hex(ciphertext),
         nonce: this.sodium.to_hex(nonce)
       };
-
-      return this.relay;
     }
 
     return false;
@@ -211,26 +197,24 @@ class _SoAuth {
         data.nonce = this.sodium.from_hex(data.nonce);
       }
 
-      let findAccess = await this.checkToken(data.token);
+      let accessData = await this.checkToken(data.token);
 
-      if (findAccess) {
-        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, findAccess.boxPublicKey + this.hostId);
+      if (accessData) {
+        let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, Config.secret);
+        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + accessData.lastModified.getTime());
+        this.boxKeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
-        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + findAccess.lastModified.getTime());
-        this.boxkeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
+        let decrypted = await this.sodium.crypto_box_open_easy(data.ciphertext, data.nonce, this.sodium.from_hex(accessData.boxPublicKey), this.boxKeypair.privateKey);
 
-        let decrypted = await this.sodium.crypto_box_open_easy(data.ciphertext, data.nonce, this.sodium.from_hex(findAccess.boxPublicKey), this.boxkeypair.privateKey);
+        this.clientBoxPublicKey = this.sodium.from_hex(accessData.boxPublicKey);
 
         if (decrypted) {
-          this.cliqueBoxPublicKey = this.sodium.from_hex(findAccess.boxPublicKey);
           try {
             return JSON.parse(this.sodium.to_string(decrypted));
           } catch (err) {
             return this.sodium.to_string(decrypted);
           }
         }
-
-        this.cliqueBoxPublicKey = false;
       }
     }
     
@@ -242,20 +226,95 @@ class _SoAuth {
   async checkToken(token) {
     return await Access.findOne({ token: token });
   }
+
+  // Logout
+  async logout(token) {
+    let accessData = await Access.findOne({ token: token });
+    if (accessData) {
+      return await Access.update({
+        _id: accessData._id,
+        boxPublicKey: '',
+        token: ''
+      });
+    }
+
+    return false;
+  }
 }
 
 
 
 // ==== MIDDLEWARE ====
-var express = require('express');
-var router = express.Router();
-var path = require('path');
-var url  = require('url');
-var fs = require('fs');
 
-var SoAuth = false;
-var config = false;
+// Export middleware
+module.exports = function (options) {
+  if (options.secret === undefined) {
+    throw new Error('Must provide SoAuth secret');
+  }
 
+  Config.secret = options.secret;
+
+  if (options.handler === undefined) {
+    throw new Error('Handler not provided.');
+  }
+
+  if (
+    typeof options.handler === 'object'
+    && typeof options.handler.create === 'function'
+    && typeof options.handler.update === 'function'
+    && typeof options.handler.findOne === 'function'
+  ) {
+    // OK
+  } else {
+    throw new Error('Handler does not meet specifications.');
+  }
+
+  // Default media fetch controller if not exists
+  if (typeof options.handler.mediaFetchController !== 'function') {
+    options.handler.mediaFetchController = function () {};
+  }
+
+  Access = options.handler;
+
+  let SoAuth = new _SoAuth(Config.secret);
+  SoAuth.setup().then(sodium => {
+    // Create the signature keypair
+    let seed = sodium.crypto_generichash(sodium.crypto_generichash_BYTES_MAX, Config.secret);
+    let signSeed = sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed);
+
+    Config.signKeypair = sodium.crypto_sign_seed_keypair(signSeed);
+    console.log('Signature public key is', sodium.to_hex(Config.signKeypair.publicKey));
+  });
+
+  return router;
+};
+
+
+
+// ==== ROUTER ====
+
+
+// Handles logout
+router.all('/soauth/logout/:token', function(req, res, next) {
+  if (req.params.token !== undefined) {
+    let SoAuth = new _SoAuth(Config.secret);
+
+    SoAuth.setup().then(() => {
+      SoAuth.logout(req.params.token).then(result => {
+        if (result) {
+          res.json({
+            success: true,
+            message: 'OK'
+          });
+        } else {
+          next();
+        }
+      });
+    });
+  } else {
+    next();
+  }
+});
 
 // Handles negotiation
 router.all('/soauth', function(req, res, next) {
@@ -263,6 +322,8 @@ router.all('/soauth', function(req, res, next) {
     req.body.signature !== undefined 
     && req.body.signPublicKey !== undefined
   ) {
+    let SoAuth = new _SoAuth(Config.secret);
+
     SoAuth.setup().then(() => {
       SoAuth.probe({
         signature: req.body.signature,
@@ -299,6 +360,8 @@ router.all('*', function(req, res, next) {
 
   //  Check if the token is valid
   if (res.locals.token !== undefined) {
+    let SoAuth = new _SoAuth(Config.secret);
+
     SoAuth.setup().then(() => {
       SoAuth.checkToken(res.locals.token).then(data => {
         if (data) {
@@ -362,6 +425,8 @@ router.all('*', function(req, res, next) {
     && req.body.nonce !== undefined 
     && req.body.token !== undefined
   ) {
+    let SoAuth = new _SoAuth(Config.secret);
+
     SoAuth.setup().then(() => {
       SoAuth.decrypt({
         ciphertext: req.body.ciphertext,
@@ -371,6 +436,7 @@ router.all('*', function(req, res, next) {
         if (decrypted) {
           res.locals.decrypted = decrypted;
           res.locals.SoAuth = SoAuth;
+
           next();
         } else {
           next(new Error('Invalid access'));
@@ -381,38 +447,3 @@ router.all('*', function(req, res, next) {
     next();
   }
 });
-
-
-// Export middleware
-module.exports = function(options) {
-  config = options;
-
-  if (options.hostId === undefined) {
-    config.hostId = 'super-secret';
-  }
-
-  if (options.handler === undefined) {
-    throw new Error('Handler not provided.');
-  }
-
-  if (
-    typeof options.handler === 'object'
-    && typeof options.handler.create === 'function'
-    && typeof options.handler.update === 'function'
-    && typeof options.handler.findOne === 'function'
-  ) {
-    // OK
-  } else {
-    throw new Error('Handler does not meet specifications.');
-  }
-
-  // Default media fetch controller if not exists
-  if (typeof options.handler.mediaFetchController !== 'function') {
-    options.handler.mediaFetchController = function () {};
-  }
-
-  Access = options.handler;
-  SoAuth = new _SoAuth(options.hostId);
-
-  return router;
-};

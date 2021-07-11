@@ -74,9 +74,9 @@ app.all('/soauth', function(req, res, next) {
   }, second * 1000);
 });
 
-const hostId = 'localhost:3000';
+const secret = require('./configs/so-auth.json').passphrase;
 app.use(soAuth({
-  hostId: hostId,
+  secret: secret,
   handler: require('./models/access')
 }));
 

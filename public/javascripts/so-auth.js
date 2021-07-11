@@ -2,16 +2,14 @@
 
 class SoAuth {
   constructor(options) {
-    this.hostId = options.hostId || 'super-secret';
-    this.endpoint = options.endpoint || 'http://localhost:3000/';
+    this.hostSignPublicKey = options.hostSignPublicKey;
+    this.endpoint = options.endpoint;
 
-    this.token = options.token || false;
-    this.boxSeed = options.boxSeed || false;
-    this.boxkeypair = options.boxkeypair || false;
-    this.signkeypair = options.signkeypair || false;
+    this.token = options.token ? options.token : false;
+    this.boxSeed = options.boxSeed ? options.boxSeed : false;
+    this.boxKeypair = options.boxKeypair ? options.boxKeypair : false;
 
-    this.relay = '';
-    this.cliqueBoxPublicKey = options.cliqueBoxPublicKey || false;
+    this.hostBoxPublicKey = options.hostBoxPublicKey ? options.hostBoxPublicKey : false;
   }
 
 
@@ -37,8 +35,10 @@ class SoAuth {
       }
 
       let key, thisSeedString = "", seedString = "";
+
       for (key in credential) {
         thisSeedString = "";
+
         if (credential.hasOwnProperty(key)) {
           thisSeedString = await sodium.crypto_generichash(sodium.crypto_generichash_BYTES_MAX, key + credential[key]);
           thisSeedString = sodium.to_hex(thisSeedString);
@@ -46,65 +46,54 @@ class SoAuth {
         }
       }
 
-      let seed = await sodium.crypto_generichash(sodium.crypto_generichash_BYTES_MAX, seedString + this.hostId);
+      let seed = await sodium.crypto_generichash(sodium.crypto_generichash_BYTES_MAX, seedString + this.hostSignPublicKey);
 
       let signSeed = await sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed);
       this.boxSeed = await sodium.crypto_generichash(sodium.crypto_sign_SEEDBYTES, seed + sodium.randombytes_random());
 
-      this.boxkeypair = await sodium.crypto_box_seed_keypair(this.boxSeed);
-      this.signkeypair = await sodium.crypto_sign_seed_keypair(signSeed);
+      this.boxKeypair = await sodium.crypto_box_seed_keypair(this.boxSeed);
+
+      return await sodium.crypto_sign_seed_keypair(signSeed);
     }
+
+    return false;
   }
 
-  async _sign(intention, meta) {
-    let acceptedIntention = ['register', 'login'];
-
-    if (!acceptedIntention.includes(intention)) {
-      throw new Error('Invalid intention');
-    }
-
+  async _sign(meta, intention, signKeypair) {
     let message = this._refineMessage({
       intention: intention,
-      boxPublicKey: sodium.to_hex(this.boxkeypair.publicKey),
+      boxPublicKey: sodium.to_hex(this.boxKeypair.publicKey),
+      serverSignPublicKey: this.hostSignPublicKey,
       meta: meta
     });
 
-    let signature = await sodium.crypto_sign(sodium.from_string(message), this.signkeypair.privateKey);
+    let signature = await sodium.crypto_sign(sodium.from_string(message), signKeypair.privateKey);
 
-    this.relay = {
+    return {
       signature: sodium.to_hex(signature),
-      signPublicKey: sodium.to_hex(this.signkeypair.publicKey)
+      signPublicKey: sodium.to_hex(signKeypair.publicKey)
     };
-
-    // Done using
-    this.signkeypair = false;
-
-    return this.relay;
   }
 
   async _validate(data) {
     if (
       typeof data === 'object'
       && data.signature !== undefined
-      && data.signPublicKey !== undefined
     ) {
       if (typeof data.signature === 'string') {
         data.signature = sodium.from_hex(data.signature);
       }
-      if (typeof data.signPublicKey === 'string') {
-        data.signPublicKey = sodium.from_hex(data.signPublicKey);
-      }
 
-      let unsigned = await sodium.crypto_sign_open(data.signature, data.signPublicKey);
+      let unsigned = await sodium.crypto_sign_open(data.signature, sodium.from_hex(this.hostSignPublicKey));
 
       if(unsigned){
         let message = JSON.parse(sodium.to_string(unsigned));
 
         if (message.boxPublicKey !== undefined && message.token !== undefined) {
           if (typeof message.boxPublicKey === 'string') {
-            this.cliqueBoxPublicKey = sodium.from_hex(message.boxPublicKey);
+            this.hostBoxPublicKey = sodium.from_hex(message.boxPublicKey);
           } else {
-            this.cliqueBoxPublicKey = message.boxPublicKey;
+            this.hostBoxPublicKey = message.boxPublicKey;
           }
 
           this.token = message.token;
@@ -112,19 +101,23 @@ class SoAuth {
           return message;
         }
       }
-
-      this.cliqueBoxPublicKey = false;
-      this.token = false;
     }
     
     return false;
   }
 
   async negotiate(credential, intention, meta = {}) {
-    await this._log(credential);
-    await this._sign(intention, meta);
-    let response = await this._send({ pathname: '/soauth' });
-    return await this._validate(response);
+    let acceptedIntention = [ 'login' , 'register' ];
+
+    if (acceptedIntention.includes(intention)) {
+      let signKeypair = await this._log(credential);
+      let signed = await this._sign(meta, intention, signKeypair);
+      let response = await this._send(signed, { pathname: '/soauth' });
+
+      return await this._validate(response);
+    }
+
+    return false;
   }
 
 
@@ -134,15 +127,13 @@ class SoAuth {
 
     if (message) {
       let nonce = sodium.randombytes_buf(sodium.crypto_box_NONCEBYTES);
-      let ciphertext = await sodium.crypto_box_easy(message, nonce, this.cliqueBoxPublicKey, this.boxkeypair.privateKey);    
+      let ciphertext = await sodium.crypto_box_easy(message, nonce, this.hostBoxPublicKey, this.boxKeypair.privateKey);    
 
-      this.relay = {
+      return {
         ciphertext: sodium.to_hex(ciphertext),
         nonce: sodium.to_hex(nonce),
         token: this.token
       };
-
-      return this.relay;
     }
 
     return false;
@@ -162,7 +153,7 @@ class SoAuth {
         data.nonce = sodium.from_hex(data.nonce);
       }
 
-      let decrypted = await sodium.crypto_box_open_easy(data.ciphertext, data.nonce, this.cliqueBoxPublicKey, this.boxkeypair.privateKey);
+      let decrypted = await sodium.crypto_box_open_easy(data.ciphertext, data.nonce, this.hostBoxPublicKey, this.boxKeypair.privateKey);
 
       if (decrypted) {
         try {
@@ -171,9 +162,6 @@ class SoAuth {
           return sodium.to_string(decrypted);
         }
       }
-
-      this.cliqueBoxPublicKey = false;
-      this.token = false;
     }
     
     // Handles error or non-conformed ciphertext
@@ -185,8 +173,15 @@ class SoAuth {
   }
 
   async exchange(message, pathname) {
-    await this._encrypt(message);
-    let response = await this._send({ 
+    if (typeof message === 'string') {
+      message = message.trim();
+      if (message === '') {
+        return;
+      }
+    }
+
+    let encrypted = await this._encrypt(message);
+    let response = await this._send(encrypted, { 
         pathname: pathname
       });
     return await this._decrypt(response);
@@ -194,8 +189,8 @@ class SoAuth {
 
 
   // Relay
-  async _send(options = {}) {
-    let message = this._refineMessage(this.relay);
+  async _send(message , options = {}) {
+    message = this._refineMessage(message);
     let endpoint = this.endpoint;
 
     if (options.url !== undefined) {
@@ -240,11 +235,11 @@ class SoAuth {
     }
 
     let credential = {
-      hostId: this.hostId,
       endpoint: this.endpoint,
       token: this.token,
       boxSeed: sodium.to_hex(this.boxSeed),
-      cliqueBoxPublicKey: sodium.to_hex(this.cliqueBoxPublicKey)
+      hostBoxPublicKey: sodium.to_hex(this.hostBoxPublicKey),
+      ts: new Date()
     };
 
     if (callback) {
@@ -257,48 +252,66 @@ class SoAuth {
   async load(credential) {
     if (credential === undefined) {
       credential = localStorage.getItem('so-auth');
+      if (!credential) {
+        return false;
+      }
       credential = JSON.parse(credential);
-      localStorage.removeItem('so-auth');
     }
 
     if (
       typeof credential === 'object'
-      && credential !== null
-      && credential !== undefined
-      && credential.hostId !== undefined
       && credential.endpoint !== undefined
       && credential.token !== undefined
       && credential.boxSeed !== undefined
-      && credential.cliqueBoxPublicKey !== undefined
+      && credential.hostBoxPublicKey !== undefined
+      && credential.ts !== undefined
     ) {
-      let SoAuth = this;
+      let timestamp = Math.round(new Date().getTime() / 1000);
+      let hourMax = 12;
+      timestamp = timestamp - (hourMax * 3600);
+      let isPast = credential.ts >= new Date(timestamp * 1000).getTime();
 
-      let delay = new Promise(resolve => {
-        setTimeout(function() {
-          SoAuth.hostId = credential.hostId;
-          SoAuth.endpoint = credential.endpoint;
-          SoAuth.token = credential.token;
-          SoAuth.boxSeed = sodium.from_hex(credential.boxSeed);
-          SoAuth.cliqueBoxPublicKey = sodium.from_hex(credential.cliqueBoxPublicKey);
-          SoAuth.boxkeypair = sodium.crypto_box_seed_keypair(SoAuth.boxSeed);
-          resolve(true);
-        },500);
-      });
+      if (!isPast) {
+        let SoAuth = this;
 
-      return await delay;
+        let delay = new Promise(resolve => {
+          setTimeout(function() {
+            SoAuth.endpoint = credential.endpoint;
+            SoAuth.token = credential.token;
+            SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
+            SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
+
+            resolve(true);
+          },500);
+        });
+
+        return await delay;
+      } else {
+        localStorage.setItem('so-auth', JSON.stringify(credential));
+        return false;
+      }
+    } else {
+      return false;
     }
-
-    return false
   }
 
   clone() {
     return new SoAuth({
-      hostId: this.hostId,
       endpoint: this.endpoint,
       token: this.token,
-      boxSeed: this.boxSeed,
-      cliqueBoxPublicKey: this.cliqueBoxPublicKey,
-      boxkeypair: this.boxkeypair
+      boxKeypair: this.boxKeypair,
+      hostBoxPublicKey: this.hostBoxPublicKey
     });
+  }
+
+  async logout() {
+    let response = await this._send('', { pathname: '/soauth/logout/' + this.token });
+
+    if (response.success === true) {
+      localStorage.removeItem('so-auth');
+      return true;
+    }
+
+    return false;
   }
 }

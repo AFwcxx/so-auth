@@ -5,36 +5,25 @@ It only covers the authentication aspects. User and permissions are separate sco
 
 
 ## Concept
+The client already know the public identity of the server.
+The server should never store any client private credentials.
 
-- Signing: 
-  - Process of registration and login. Login requires you to prove yourself without having to share username, email or password.
-  - Signing keys are deterministic, suitable to identify an entity.
-  - Only Signing public key is stored in the server database or memory.
-
-- Authentication: 
-  - Process of communication that is considered to be real and truth from the source that completed Signing process.
-  - Authentication keys are random and changes everytime a new communication is established. Suitable for session management.
-  - Only Authentication public key is stored in the server database or memory.
+There are 3 main keypoints:
+- Signing keys: Deterministic and never stored anywhere. Used as identity.
+- Box keys: Random. Used as encrypted communication. Optional to stored in local storage for persistent.
+- Token: Random. Used to retrieve private static files and as a session only.
 
 
-### Signing
+### Negotation Flow
+|  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
+|  |  | Generate signing keypairs and share the public key to all clients |
+| Has the server signing public key. \nGenerate seed from input and create deterministic signing key pairs. \nGenerate random seed for box key pairs. \nCreate a message that consists of it's box public key. \nSign with it's own signing private key and send the signature and signing public key as negotiation. | Has the client signature, signing public key and box public key  |  |
+|  | Has the server signature and box public key  | Receives the negotation, validate the signature and signing public key. \nIf valid, generate it's own box key pairs and random token. \nCreate a message that consists of it's own box public key and random token. \nSign it with own signing private key and reply to the client with only the signature. |
+| Receives the signature, use the server public key that it already has to validate whether the signature is really from the source it trusts. If valid, store the server box public key |  |  |
 
-Process flow:
-1. Client's Username and password is used to generate deterministic Signing keys and random Authentication keys.
-2. Client signed intention (login or register) data with Signing private key and send to server for negotiation. Signing and Authentication public keys are shared during the negotiation.
-3. Server probe the intention data with the received Signing public key and process the intention.
-4. Server generate itself a new sets of deterministic Signing and random Authentication keys; Random generated token is also created and should be strictly used to retrieve static private files, not to be used for data or message exchange. 
-5. Server signed introduction data that consists of signature (contains token and Authentication public key) and Signing public key with Signing private key and send back to the Client.
-5. Client probe the introduction data, remove the existence of it's own Singing keys from memory and ready to begin encrypted communication that only uses Authentication keys for data or message exchange and token for static private files retrieval from this point onwards.
-
-### Authentication
-
-Process flow:
-1. Client encrypt data or message with Authentication private key and send to server which contains a ciphertext, nonce and token.
-2. Server receives the payload and check again if the token received is the same with the Authentication public key it had received previously. This token is redundant and strictly just for session and do not provide any benefit or part of the encryption.
-3. Server decrypt the ciphertext with nonce and Client's Authentication public key, process it's request, encrypt the response and send back to Client.
-4. Client receives the payload, decrypt the ciphertext with nonce and Server's Authentication public key.
-5. Repeat.
+### Communication Flow
+|  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
+|  |  |  |
 
 
 ## Specifications
@@ -180,7 +169,7 @@ soAuth.negotiate(credential, 'login', meta).then(response => {
 // Middleware is handling the Signing part automatically
 ```
 
-### Authentication example
+### Communication example
 ```js
 // Client:
 soAuth.load().then(good => {

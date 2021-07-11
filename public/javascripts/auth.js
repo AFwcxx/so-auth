@@ -4,7 +4,7 @@ window.auth = new Vue({
     show: true,
     form: {
       password: 'VeRy-h@rd_p@s$w0rD',
-      email: 'afwcxx@email.com',
+      email: 'someone@email.com',
       message: '',
       hasError: false
     },
@@ -42,8 +42,14 @@ window.auth = new Vue({
   },
   created: function() {
     this.SoAuth = new SoAuth({
-      hostId: 'localhost:3000-sochain',
+      hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
       endpoint: 'http://localhost:3000/'
+    });
+
+    this.SoAuth.load().then(result => {
+      if (result) {
+        window.location.replace("?soauth=" + this.SoAuth.token);
+      }
     });
   }
 });

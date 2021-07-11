@@ -43,7 +43,6 @@ async function update(params) {
     && params._id !== undefined
     && params.boxPublicKey !== undefined
     && params.token !== undefined
-    && params.meta !== undefined
   ) {
     await db.collection("access").updateOne({ _id: params._id }, {
       $set: { 
