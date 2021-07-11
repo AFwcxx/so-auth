@@ -58,7 +58,7 @@ window.verified = new Vue({
   },
   created: function() {
     this.SoAuth = new SoAuth({
-      hostId: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
+      hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
       endpoint: 'http://localhost:3000/'
     });
     this.SoAuth.load().then(good => {
