@@ -245,13 +245,13 @@ class SoAuth {
     if (callback) {
       callback(credential);
     } else {
-      localStorage.setItem('so-auth-' + sodium.to_hex(this.hostSignPublicKey), JSON.stringify(credential));
+      localStorage.setItem('so-auth-' + this.hostSignPublicKey, JSON.stringify(credential));
     }
   }
 
   async load(credential) {
     if (credential === undefined) {
-      credential = localStorage.getItem('so-auth-' + sodium.to_hex(this.hostSignPublicKey));
+      credential = localStorage.getItem('so-auth-' + this.hostSignPublicKey);
       if (!credential) {
         return false;
       }
@@ -287,7 +287,7 @@ class SoAuth {
 
         return await delay;
       } else {
-        localStorage.setItem('so-auth-' + sodium.to_hex(this.hostSignPublicKey), JSON.stringify(credential));
+        localStorage.setItem('so-auth-' + this.hostSignPublicKey, JSON.stringify(credential));
         return false;
       }
     } else {
@@ -308,7 +308,7 @@ class SoAuth {
     let response = await this._send('', { pathname: '/soauth/logout/' + this.token });
 
     if (response.success === true) {
-      localStorage.removeItem('so-auth-' + sodium.to_hex(this.hostSignPublicKey));
+      localStorage.removeItem('so-auth-' + this.hostSignPublicKey);
       return true;
     }
 
