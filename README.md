@@ -16,6 +16,7 @@ There are 3 main keypoints:
 
 ### Negotation Flow
 |  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
+| ------------- | ------------- |------------- |
 |  |  | Generate signing keypairs and share the public key to all clients |
 | Has the server signing public key. \nGenerate seed from input and create deterministic signing key pairs. \nGenerate random seed for box key pairs. \nCreate a message that consists of it's box public key. \nSign with it's own signing private key and send the signature and signing public key as negotiation. | Has the client signature, signing public key and box public key  |  |
 |  | Has the server signature and box public key  | Receives the negotation, validate the signature and signing public key. \nIf valid, generate it's own box key pairs and random token. \nCreate a message that consists of it's own box public key and random token. \nSign it with own signing private key and reply to the client with only the signature. |
@@ -23,6 +24,7 @@ There are 3 main keypoints:
 
 ### Communication Flow
 |  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
+| ------------- | ------------- |------------- |
 |  |  |  |
 
 
