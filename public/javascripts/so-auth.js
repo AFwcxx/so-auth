@@ -5,6 +5,7 @@ class SoAuth {
     this.hostSignPublicKey = options.hostSignPublicKey;
     this.endpoint = options.endpoint;
 
+    this.meta = options.meta ? options.meta: false;
     this.token = options.token ? options.token : false;
     this.boxSeed = options.boxSeed ? options.boxSeed : false;
     this.boxKeypair = options.boxKeypair ? options.boxKeypair : false;
@@ -107,6 +108,8 @@ class SoAuth {
   }
 
   async negotiate(credential, intention, meta = {}) {
+    this.meta = meta;
+
     let acceptedIntention = [ 'login' , 'register' ];
 
     if (acceptedIntention.includes(intention)) {
@@ -236,6 +239,7 @@ class SoAuth {
 
     let credential = {
       endpoint: this.endpoint,
+      meta: this.meta,
       token: this.token,
       boxSeed: sodium.to_hex(this.boxSeed),
       hostBoxPublicKey: sodium.to_hex(this.hostBoxPublicKey),
@@ -261,6 +265,7 @@ class SoAuth {
     if (
       typeof credential === 'object'
       && credential.endpoint !== undefined
+      && credential.meta !== undefined
       && credential.token !== undefined
       && credential.boxSeed !== undefined
       && credential.hostBoxPublicKey !== undefined
@@ -277,6 +282,7 @@ class SoAuth {
         let delay = new Promise(resolve => {
           setTimeout(function() {
             SoAuth.endpoint = credential.endpoint;
+            SoAuth.meta = credential.meta;
             SoAuth.token = credential.token;
             SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
             SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
@@ -287,7 +293,7 @@ class SoAuth {
 
         return await delay;
       } else {
-        localStorage.setItem('so-auth-' + this.hostSignPublicKey, JSON.stringify(credential));
+        localStorage.removeItem('so-auth-' + this.hostSignPublicKey);
         return false;
       }
     } else {
