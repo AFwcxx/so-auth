@@ -1,3 +1,5 @@
+const env = process.env.NODE_ENV || 'development';
+
 const MongoClient = require('mongodb').MongoClient;
 const mongoConfig = require('../configs/mongodb.json');
 const mongo = require('mongodb');
@@ -25,16 +27,10 @@ function getGfs() {
   return dbGfsConnected;
 }
 
-async function connectServer(env) {
+async function connectServer() {
   try {
     if (mongoConfig.server === undefined || mongoConfig.server === '') {
       throw new Error("MongoDB Error: No database defined in config.");
-    }
-
-    env = env.toLowerCase();
-    let acceptedEnv = ['development', 'production'];
-    if (!acceptedEnv.includes(env)) {
-      throw new Error('MongoDB Error: Invalid environment value.');
     }
 
     let url = "";

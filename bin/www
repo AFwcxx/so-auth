@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
 var mongoDb = require('../modules/mongodb');
-var env = process.env.NODE_ENV || 'development';
 
 var app, debug, http, port, server;
 
-mongoDb.connect(env).then(conn => {
+mongoDb.connect().then(conn => {
   /**
    * Module dependencies.
    */
