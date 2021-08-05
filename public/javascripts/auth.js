@@ -9,11 +9,14 @@ window.auth = new Vue({
       hasError: false
     },
     SoAuth: false,
-    showSpinner: false
+    spinner: {
+      login: false,
+      register: false
+    }
   },
   methods: {
     submit: function (intention) {
-      this.showSpinner = true;
+      this.spinner[intention] = true;
 
       let vm = this;
 
@@ -29,7 +32,8 @@ window.auth = new Vue({
       };
 
       this.SoAuth.negotiate(credential, intention, meta).then(response => {
-        vm.showSpinner = false;
+        vm.spinner[intention] = false;
+
         if (response && response.token !== undefined) {
           this.SoAuth.save();
           window.location.replace("?soauth=" + response.token);

@@ -74,8 +74,8 @@
                     ></b-form-input>
                 </b-form-group>
 
-                <b-button type="button" variant="primary" v-on:click="submit('login')"><b-spinner small v-if="showSpinner"></b-spinner> Login</b-button>
-                <b-button type="button" variant="secondary" v-on:click="submit('register')">Register</b-button>
+                <b-button type="button" variant="primary" v-on:click="submit('login')"><b-spinner small v-if="spinner.login"></b-spinner> Login</b-button>
+                <b-button type="button" variant="secondary" v-on:click="submit('register')"><b-spinner small v-if="spinner.register"></b-spinner> Register</b-button>
 
                 <b-alert variant="danger" v-if="form.hasError" show class="mt-4" v-html="form.message"></b-alert>
               </b-form>
