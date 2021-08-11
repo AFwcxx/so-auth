@@ -4,7 +4,6 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var helmet = require('helmet');
-var bodyParser = require('body-parser');
 var mustacheExpress = require('mustache-express');
 var useragent = require('express-useragent');
 var publicIp = require('public-ip');
@@ -21,8 +20,8 @@ var app = express();
 app.use(helmet({
   contentSecurityPolicy: false
 }));
-app.use(bodyParser.json({limit: '100mb', extended: true}))
-app.use(bodyParser.urlencoded({limit: '100mb', extended: true}))
+app.use(express.json({limit: '100mb', extended: true}))
+app.use(express.urlencoded({limit: '100mb', extended: true}))
 
 // view engine setup
 app.engine('html', mustacheExpress());
@@ -30,8 +29,6 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'html');
 
 app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // For API
