@@ -56,13 +56,14 @@ window.verified = new Vue({
       });
     }
   },
-  created: function() {
+  mounted: function() {
     this.SoAuth = new SoAuth({
       hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
       endpoint: 'http://localhost:3000/'
     });
-    this.SoAuth.load().then(good => {
-      if (good === false) {
+
+    this.SoAuth.load().then(result => {
+      if (result === false) {
         window.location.replace("/");
       } else {
         window.history.replaceState({}, document.title, "/");

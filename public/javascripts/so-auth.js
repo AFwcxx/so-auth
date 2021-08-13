@@ -108,6 +108,8 @@ class SoAuth {
   }
 
   async negotiate(credential, intention, meta = {}) {
+    await sodium.ready;
+
     this.meta = meta;
 
     let acceptedIntention = [ 'login' , 'register' ];
@@ -176,6 +178,8 @@ class SoAuth {
   }
 
   async exchange(message, pathname) {
+    await sodium.ready;
+
     if (typeof message === 'string') {
       message = message.trim();
       if (message === '') {
@@ -254,6 +258,8 @@ class SoAuth {
   }
 
   async load(credential) {
+    await sodium.ready;
+
     if (credential === undefined) {
       credential = localStorage.getItem('so-auth-' + this.hostSignPublicKey);
       if (!credential) {
@@ -273,25 +279,21 @@ class SoAuth {
     ) {
       let timestamp = Math.round(new Date().getTime() / 1000);
       let hourMax = 12;
+
       timestamp = timestamp - (hourMax * 3600);
+
       let isPast = credential.ts >= new Date(timestamp * 1000).getTime();
 
       if (!isPast) {
         let SoAuth = this;
 
-        let delay = new Promise(resolve => {
-          setTimeout(function() {
-            SoAuth.endpoint = credential.endpoint;
-            SoAuth.meta = credential.meta;
-            SoAuth.token = credential.token;
-            SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
-            SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
+        SoAuth.endpoint = credential.endpoint;
+        SoAuth.meta = credential.meta;
+        SoAuth.token = credential.token;
+        SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
+        SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
 
-            resolve(true);
-          },500);
-        });
-
-        return await delay;
+        return true;
       } else {
         localStorage.removeItem('so-auth-' + this.hostSignPublicKey);
         return false;
