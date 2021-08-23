@@ -5,10 +5,11 @@ const https = require("https");
 
 // EXPORT --
 exports.isJsonString = isJsonString;
-exports.httpGet = httpGet;
-exports.httpPost = httpPost;
-exports.httpsGet = httpsGet;
-exports.httpsPost = httpsPost;
+exports.ucWord = ucWord;
+exports.arithmetic = arithmetic;
+exports.monthDiff = monthDiff;
+exports.post = post;
+exports.get = get;
 
 
 function isJsonString(str) {
@@ -20,7 +21,47 @@ function isJsonString(str) {
   return true;
 }
 
-function httpGet(url, getData) {
+function ucWord(str) {
+  return str.toLowerCase().replace(/\b[a-z]/g, function(letter) {
+    return letter.toUpperCase();
+  });
+}
+
+function arithmetic(operation, a, b, decimal) {
+  a = a * parseInt(decimal);
+  b = b * parseInt(decimal);
+
+  if (operation === '+') {
+    return ((a + b) / parseInt(decimal)).toFixed(parseInt(decimal));
+  } else if (operation === '-') {
+    return ((a - b) / parseInt(decimal)).toFixed(parseInt(decimal));
+  } else {
+    return false;
+  }
+}
+
+function monthDiff(dateFrom, dateTo) {
+  return dateTo.getMonth() - dateFrom.getMonth() + (12 * (dateTo.getFullYear() - dateFrom.getFullYear()));
+}
+
+function get(url, getData, headers) {
+  if (url.indexOf('https') > -1) {
+    return httpsGet(url, getData, headers);
+  }
+  return httpGet(url, getData, headers);
+}
+
+function post(url, postData, headers) {
+  if (url.indexOf('https') > -1) {
+    return httpsPost(url, postData, headers);
+  }
+  return httpPost(url, postData, headers);
+}
+
+
+// Support
+
+function httpGet(url, getData, headers) {
   return new Promise((resolve, reject) => {
     if (typeof getData !== "undefined") {
       url = new URL(url);
@@ -34,6 +75,14 @@ function httpGet(url, getData) {
         },
         'maxRedirects': 20
       };
+
+      if (headers && typeof headers === 'object') {
+        for (let k in headers) {
+          if (headers.hasOwnProperty(k)) {
+            options.headers[k] = headers[k];
+          }
+        }
+      }
 
       let req = http.request(options, function (res) {
         let chunks = [];
@@ -85,7 +134,7 @@ function httpGet(url, getData) {
   });
 }
 
-function httpPost(url, postData) {
+function httpPost(url, postData, headers) {
   return new Promise((resolve, reject) => {
     url = new URL(url);
 
@@ -99,6 +148,14 @@ function httpPost(url, postData) {
       },
       'maxRedirects': 20
     };
+
+    if (headers && typeof headers === 'object') {
+      for (let k in headers) {
+        if (headers.hasOwnProperty(k)) {
+          options.headers[k] = headers[k];
+        }
+      }
+    }
 
     let req = http.request(options, function (res) {
       let chunks = [];
@@ -130,7 +187,7 @@ function httpPost(url, postData) {
   });
 }
 
-function httpsGet(url, getData) {
+function httpsGet(url, getData, headers) {
   return new Promise((resolve, reject) => {
     if (typeof getData !== "undefined") {
       url = new URL(url);
@@ -144,6 +201,14 @@ function httpsGet(url, getData) {
         },
         'maxRedirects': 20
       };
+
+      if (headers && typeof headers === 'object') {
+        for (let k in headers) {
+          if (headers.hasOwnProperty(k)) {
+            options.headers[k] = headers[k];
+          }
+        }
+      }
 
       let req = https.request(options, function (res) {
         let chunks = [];
@@ -195,7 +260,7 @@ function httpsGet(url, getData) {
   });
 }
 
-function httpsPost(url, postData) {
+function httpsPost(url, postData, headers) {
   return new Promise((resolve, reject) => {
     url = new URL(url);
     let options = {
@@ -208,6 +273,14 @@ function httpsPost(url, postData) {
       },
       'maxRedirects': 20
     };
+
+    if (headers && typeof headers === 'object') {
+      for (let k in headers) {
+        if (headers.hasOwnProperty(k)) {
+          options.headers[k] = headers[k];
+        }
+      }
+    }
 
     let req = https.request(options, function (res) {
       let chunks = [];

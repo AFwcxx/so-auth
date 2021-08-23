@@ -1,16 +1,23 @@
 "use strict";
 
+const env = process.env.NODE_ENV || 'development';
+const config = require('../configs/default.json');
+
 var express = require('express');
 var router = express.Router();
 
 router.get('*', function(req, res, next) {
   if (res.locals.token !== undefined) {
     res.render('verified', {
-      title: 'Secured Communication'
+      title: config[env].title,
+      base: config[env].base,
+      prod: env !== 'development'
     });
   } else {
     res.render('auth', {
-      title: 'So-Auth',
+      title: config[env].title,
+      base: config[env].base,
+      prod: env !== 'development',
       reset: req.query.soauth !== undefined
     });
   }

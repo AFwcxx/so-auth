@@ -18,9 +18,12 @@ window.auth = new Vue({
   },
   methods: {
     submit: function (intention) {
-      this.spinner[intention] = true;
+      if (this.spinner[intention]) {
+        return;
+      }
 
-      let vm = this;
+      this.spinner[intention] = true;
+      this.form.hasError = false;
 
       // Used to create deterministic signing keys
       let credential = {
@@ -34,12 +37,11 @@ window.auth = new Vue({
       };
 
       this.SoAuth.negotiate(credential, intention, meta).then(response => {
-        vm.spinner[intention] = false;
-
         if (response && response.token !== undefined) {
           this.SoAuth.save();
           window.location.replace("?soauth=" + response.token);
         } else {
+          this.spinner[intention] = false;
           this.form.hasError = true;
           this.form.message = "Invalid login";
         }
@@ -49,7 +51,7 @@ window.auth = new Vue({
   mounted: function() {
     this.SoAuth = new SoAuth({
       hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
-      endpoint: 'http://localhost:3000/'
+      endpoint: document.getElementById("app-base").textContent
     });
 
     this.SoAuth.load().then(result => {

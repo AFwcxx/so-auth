@@ -23,16 +23,16 @@
     <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
 
-    <title>So-Auth</title>
+    <title>{| title |} | Error</title>
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
   </head>
   <body>
     <h1>Error</h1>
-    <h2>{{ message }}</h2>
-    {{ #error }}
-    <p>{{ stack }}</p>
-    {{ /error }}
+    <h2>{| message |}</h2>
+    {|# error |}
+    <p>{| stack |}</p>
+    {|/ error |}
   </body>
 </html>

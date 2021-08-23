@@ -14,21 +14,24 @@ window.verified = new Vue({
   },
   methods: {
     onSubmit: function (event) {
-      this.showMessageSpinner = true;
       let vm = this;
 
-      this.SoAuth.clone().exchange(this.message, '/secret').then(response => {
+      this.showMessageSpinner = true;
+      this.SoAuth.clone().exchange(this.message, '/api/secret').then(response => {
         vm.showMessageSpinner = false;
-        if (response) {
-          this.responded = response;
+
+        if (response.success) {
+          vm.responded = response.rdata;
         }
       });
     },
 
     upload: function (event) {
       this.showUploadSpinner = true;
-      const vm = this;
-      const reader = new FileReader();
+
+      let vm = this;
+      let reader = new FileReader();
+
       reader.readAsDataURL(this.file);
 
       reader.onload = function (e) {
@@ -37,14 +40,13 @@ window.verified = new Vue({
           name: vm.file.name,
           size: vm.file.size,
           type: vm.file.type 
-        }, '/media/upload').then(response => {
+        }, '/api/media/upload').then(response => {
           vm.showUploadSpinner = false;
-          if (response) {
-            if (response.success && response.rdata) {
-              vm.fileSrc = vm.$root.$data.SoAuth.endpoint + 'private/download/' + response.rdata + '?soauth=' + vm.$root.$data.SoAuth.token;
-            } else {
-              alert('Did not upload..');
-            }
+
+          if (response.success && response.rdata) {
+            vm.fileSrc = vm.$root.$data.SoAuth.endpoint + '/private/download/' + response.rdata + '?soauth=' + vm.$root.$data.SoAuth.token;
+          } else {
+            alert('Did not upload..');
           }
         });
       }
@@ -61,7 +63,7 @@ window.verified = new Vue({
   mounted: function() {
     this.SoAuth = new SoAuth({
       hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
-      endpoint: 'http://localhost:3000/'
+      endpoint: document.getElementById("app-base").textContent
     });
 
     this.SoAuth.load().then(result => {

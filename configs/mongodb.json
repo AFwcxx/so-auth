@@ -15,5 +15,27 @@
       "port": "27017"
     }
   },
-  "collections": ["access"]
+  "collections": ["access"],
+  "upload": {
+    "size": 100,
+    "media": [
+      "application/pdf",
+      "text/csv",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.oasis.opendocument.presentation",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "font/otf",
+      "image/jpeg",
+      "image/bmp",
+      "image/gif",
+      "image/png",
+      "image/svg+xml",
+      "image/tiff",
+      "image/webp"
+    ]
+  }
 }

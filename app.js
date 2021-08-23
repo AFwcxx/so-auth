@@ -1,69 +1,77 @@
 "use strict";
 
+const env = process.env.NODE_ENV || 'development';
+const config = require('./configs/default.json');
+
 var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var helmet = require('helmet');
-var mustacheExpress = require('mustache-express');
-var useragent = require('express-useragent');
 var publicIp = require('public-ip');
+var useragent = require('express-useragent');
+var mustacheExpress = require('mustache-express');
 
 var soAuth = require('./middlewares/so-auth');
 
-var s2sRouter = require('./routes/s2s');
+// APIs
+var secretRouter = require('./routes/api/secret');
+var mediaRouter = require('./routes/api/media');
+
+// S2S
+var s2sIndexRouter = require('./routes/s2s/index');
+var s2sAccessRouter = require('./routes/s2s/access');
+
+// Views
 var indexRouter = require('./routes/index');
-var secretRouter = require('./routes/secret');
-var mediaRouter = require('./routes/media');
 
 var app = express();
 
 app.use(helmet({
   contentSecurityPolicy: false
 }));
-app.use(express.json({limit: '100mb', extended: true}))
-app.use(express.urlencoded({limit: '100mb', extended: true}))
+app.use(express.json({ limit: config[env].network.requestLimit, extended: true }));
+app.use(express.urlencoded({ limit: config[env].network.requestLimit, extended: true }));
 
 // view engine setup
-app.engine('html', mustacheExpress());
+app.engine('html', mustacheExpress(null, null, [ '{|', '|}' ])); 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'html');
 
 app.use(logger('dev'));
 app.use(cookieParser());
-
-// For API
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header('Access-Control-Allow-Methods', "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  if ('OPTIONS' == req.method) {
-    res.sendStatus(200);
-  }
-  else {
-    next();
-  }
-});
-
-// user agent and ip address
 app.use(useragent.express());
-app.use(function (req, res, next) {
-  let v4 = '', v6 = '';
-  (async () => {
-    v4 = await publicIp.v4();
 
-    // if v6 is enabled
-    // v6 = await publicIp.v6();
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(function (req, res, next) {
+  (async () => {
+    let v4 = '';
+    let v6 = '';
+
+    if (config[env].network.ipv4) {
+      v4 = await publicIp.v4();
+    }
+    if (config[env].network.ipv6) {
+      v6 = await publicIp.v6();
+    }
 
     req.clientIp = v4 + ' ' + v6;
     next();
   })();
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/s2s', s2sRouter);
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header('Access-Control-Allow-Methods', "*");
+  res.header("Access-Control-Allow-Headers", "*");
+  if ('OPTIONS' === req.method) {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Add delay for negotiation to prevent brute force
 app.all('/soauth', function(req, res, next) {
@@ -79,9 +87,16 @@ app.use(soAuth({
   handler: require('./models/access')
 }));
 
+// APIs
+app.use('/api/secret', secretRouter);
+app.use('/api/media', mediaRouter);
+
+// S2S
+app.use('/s2s/*', s2sIndexRouter);
+app.use('/s2s/access', s2sAccessRouter);
+
+// Views
 app.use('/', indexRouter);
-app.use('/secret', secretRouter);
-app.use('/media', mediaRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -90,13 +105,24 @@ app.use(function(req, res, next) {
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
   res.status(err.status || 500);
-  res.render('error');
+
+  if (
+    req.path.includes('api') 
+    || req.path.includes('s2s')
+    || req.path.includes('wingold')
+  ) {
+    res.json({
+      success: false,
+      message: err.message
+    });
+  } else {
+    res.render('error', {
+      error: env === 'development' ? err : {},
+      message: err.message,
+      title: config[env].title
+    });
+  }
 });
 
 module.exports = app;

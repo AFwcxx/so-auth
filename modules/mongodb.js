@@ -1,9 +1,9 @@
 "use strict";
 
 const env = process.env.NODE_ENV || 'development';
+const mongoConfig = require('../configs/mongodb.json');
 
 const MongoClient = require('mongodb').MongoClient;
-const mongoConfig = require('../configs/mongodb.json');
 const mongo = require('mongodb');
 
 exports.getClient = getClient;
@@ -47,6 +47,8 @@ async function connectServer() {
     } else {
       url = "mongodb://"+username+":"+password+"@"+hostname+":"+port+'/'+database;
     }
+
+    console.log('Mongo: Connecting to ' + hostname + ':' + port + '/' + database);
 
     dbConnected = await connectDb(url);
     dbDatabase = database;

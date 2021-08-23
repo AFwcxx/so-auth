@@ -1,7 +1,10 @@
 "use strict";
 
+const mongoConfig = require('../configs/mongodb.json');
+
 var createError = require('http-errors');
 var path = require('path');
+
 const mongo = require('../modules/mongodb');
 const db = mongo.getClient();
 const fs = require('fs');
@@ -10,25 +13,7 @@ const sha256 = require('crypto-js/sha256');
 exports.uploadBase64 = uploadBase64;
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
-var acceptedMedia = [
-  'application/pdf',
-  'text/csv',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.oasis.opendocument.presentation',
-  'application/vnd.oasis.opendocument.spreadsheet',
-  'application/vnd.oasis.opendocument.text',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'font/otf',
-  'image/jpeg',
-  'image/bmp',
-  'image/gif',
-  'image/png',
-  'image/svg+xml',
-  'image/tiff',
-  'image/webp'
-];
+var acceptedMedia = mongoConfig.upload.media;
 
 async function findOne(params) {
   let findData = await db.collection("fs.files").findOne(params);
@@ -41,7 +26,7 @@ async function findOne(params) {
 }
 
 function uploadBase64(params, res, next) {
-  let maximumFilesize = 10 ** 8; // 100 MB
+  let maximumFilesize = mongoConfig.upload.size ** 7; // MB
 
   // Check data received
   if (
@@ -62,8 +47,10 @@ function uploadBase64(params, res, next) {
         let baseImage = params.file;
         let ext = baseImage.substring(baseImage.indexOf("/") + 1, baseImage.indexOf(";base64"));
         let fileType = baseImage.substring("data:".length,baseImage.indexOf("/"));
+
         //Forming regex to extract base64 data of file.
         let regex = new RegExp(`^data:${fileType}\/${ext};base64,`, 'gi');
+
         // Extract base64 data.
         let base64_data = baseImage.replace(regex, "");
         let hash = sha256(base64_data).toString();
@@ -71,7 +58,7 @@ function uploadBase64(params, res, next) {
         // Check if same file has already been uploaded, and just return the result
         findOne({ 'metadata.hash': hash }).then(result => {
           if (result) {
-            console.log('use exists');
+            console.log('Media: Use exists');
 
             if (res.locals.SoAuth !== undefined) {
               res.locals.SoAuth.encrypt({
@@ -89,7 +76,7 @@ function uploadBase64(params, res, next) {
               });
             }
           } else {
-            console.log('use new');
+            console.log('Media: Use new');
 
             let bitmap = new Buffer.from(base64_data, 'base64');
 
@@ -109,8 +96,7 @@ function uploadBase64(params, res, next) {
               .on('end', function() {
                 fs.unlink(filepath, function(err) {
                   if (err) {
-                    console.log('Problem deleting uploaded file.');
-                    console.log(err);
+                    console.log('Media: Problem deleting uploaded file.', err);
                   }
                 });
 
@@ -138,10 +124,10 @@ function uploadBase64(params, res, next) {
           }
         });
       } else {
-        next(createError(406, 'Filesize exceed limit: ' + (maximumFilesize / 10 ** 6) + 'MB'));
+        next(createError(406, 'Filesize exceed limit: ' + (maximumFilesize / 100 ** 5) + 'MB'));
       }
     } else {
-      next(createError(406, 'Invalid media type'));
+      next(createError(406, 'Invalid media type, received: ' + params.type));
     }
   } else {
     next(createError(406, 'Insufficient data received'));

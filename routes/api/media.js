@@ -1,14 +1,14 @@
 "use strict";
 
-// https://github.com/aheckmann/gridfs-stream
-
+var createError = require('http-errors');
 var express = require('express');
 var router = express.Router();
-var accessModel = require('../models/access');
-var mediaModel = require('../models/media');
+
+var accessModel = require('../../models/access');
+var mediaModel = require('../../models/media');
 
 // Simple check
-router.post("*", function(req, res, next) {
+router.all("*", function(req, res, next) {
   if (
     res.locals.decrypted !== undefined 
     && res.locals.SoAuth !== undefined
@@ -19,7 +19,7 @@ router.post("*", function(req, res, next) {
         res.locals.access = result;
         next();
       } else {
-        res.status(401).json({ message: 'Invalid access' });
+        next(createError(401, 'Invalid permission'));
       }
     });
   } else {
@@ -28,11 +28,6 @@ router.post("*", function(req, res, next) {
 });
 
 router.post("/upload", function(req, res, next) {
-  let response = {
-    success: false,
-    message: 'Insufficient data received'
-  };
-
   // Check data received
   if (
     typeof res.locals.decrypted === 'object' 
@@ -49,7 +44,7 @@ router.post("/upload", function(req, res, next) {
       file: res.locals.decrypted.file,
     }, res, next);
   } else {
-    res.status(406).json(response);
+    next(createError(406, 'Invalid data'));
   }
 });
 

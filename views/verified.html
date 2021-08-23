@@ -5,24 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 
-    <link rel="apple-touch-icon" sizes="57x57" href="../icons/apple-icon-57x57.png">
-    <link rel="apple-touch-icon" sizes="60x60" href="../icons/apple-icon-60x60.png">
-    <link rel="apple-touch-icon" sizes="72x72" href="../icons/apple-icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="76x76" href="../icons/apple-icon-76x76.png">
-    <link rel="apple-touch-icon" sizes="114x114" href="../icons/apple-icon-114x114.png">
-    <link rel="apple-touch-icon" sizes="120x120" href="../icons/apple-icon-120x120.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="../icons/apple-icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="../icons/apple-icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="../icons/apple-icon-180x180.png">
-    <link rel="icon" type="image/png" sizes="192x192"  href="../icons/android-icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="../icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="../icons/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="../icons/favicon-16x16.png">
-    <link rel="manifest" href="../icons/manifest.json">
+    <link rel="apple-touch-icon" sizes="57x57" href="icons/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="icons/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="icons/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="icons/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="icons/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icons/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192"  href="icons/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+    <link rel="manifest" href="icons/manifest.json">
     <meta name="msapplication-TileColor" content="#ffffff">
-    <meta name="msapplication-TileImage" content="../icons/ms-icon-144x144.png">
+    <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <title>So-Auth</title>
+    <title>{| title |} | Verified</title>
 
     <link
       type="text/css"
@@ -32,13 +32,13 @@
     <link
       type="text/css"
       rel="stylesheet"
-      href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css"
+      href="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue.min.css"
     />
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
 
-    <link href="../private/stylesheets/verified.css?soauth={{token}}" rel="stylesheet">
+    <link href="private/stylesheets/verified.css?soauth={| token |}" rel="stylesheet">
   </head>
   <body>
     <div id="app">
@@ -47,7 +47,7 @@
           <b-button variant="danger" class="mb-4" v-on:click="logout">Logout</b-button>
           <b-card-group deck>
             <b-card
-              header="{{ title }}"
+              header="{| title |}"
               header-tag="header"
               >
               <b-form @submit.prevent="onSubmit" @reset.prevent="onReset" v-if="show">
@@ -91,15 +91,18 @@
       </b-container>
     </div>
 
+    <span id="app-token" style="display:none;">{| token |}</span>
+    <span id="app-base" style="display:none;">{| base |}</span>
+
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver"></script>
-    <script src="https://unpkg.com/http-vue-loader"></script>
+    <script src="https://unpkg.com/http-vue-loader@1.4.2/src/httpVueLoader.js"></script>
 
-    <script src="https://unpkg.com/vue@latest/dist/vue.js"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue{|# prod |}.min{|/ prod |}.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue.min.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue-icons.min.js"></script>
 
-    <script src="../javascripts/sodium.js"></script>
-    <script src="../javascripts/so-auth.js"></script>
-    <script src="../private/javascripts/verified.js?soauth={{token}}"></script>
+    <script src="javascripts/sodium.js"></script>
+    <script src="javascripts/so-auth.js"></script>
+    <script src="private/javascripts/verified.js?soauth={| token |}"></script>
   </body>
 </html>

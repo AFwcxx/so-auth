@@ -1,5 +1,8 @@
 "use strict";
 
+const env = process.env.NODE_ENV || 'development';
+const config = require('../configs/default.json');
+
 const mongo = require('../modules/mongodb');
 const db = mongo.getClient();
 
@@ -65,6 +68,7 @@ async function update(params, req, res, next) {
 
 async function findOne(params, req, res, next) {
   let message = false;
+
   if (typeof params.message === 'object') {
     message = params.message;
     delete params.message;
@@ -77,10 +81,10 @@ async function findOne(params, req, res, next) {
       // This is called from SoAuth middleware - treat as an event of the following case
       if (message.intention === 'register') {
         // Register fail
-        console.log('REGISTER FAIL');
+        console.log('Access: Register fail');
       } else if (message.intention === 'login') {
         // Login success
-        console.log('LOGIN SUCCESS');
+        console.log('Access: Login success');
       }
     }
 
@@ -91,10 +95,10 @@ async function findOne(params, req, res, next) {
     // This is called from SoAuth middleware - treat as an event of the following case
     if (message.intention === 'register') {
       // Register success
-      console.log('REGISTER SUCCESS');
+      console.log('Access: Register success');
     } else if (message.intention === 'login') {
       // Login fail
-      console.log('LOGIN FAIL');
+      console.log('Access: Login fail');
     }
   }
 

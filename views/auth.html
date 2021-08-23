@@ -22,7 +22,7 @@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="icons/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
-    <title>So-Auth</title>
+    <title>{| title |} | Login</title>
 
     <link
       type="text/css"
@@ -32,7 +32,7 @@
     <link
       type="text/css"
       rel="stylesheet"
-      href="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.css"
+      href="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue.min.css"
     />
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -46,10 +46,10 @@
         <div>
           <b-card-group deck>
             <b-card
-              header="{{ title }}"
+              header="{| title |}"
               header-tag="header"
               >
-              <b-form @submit.prevent="onSubmit" @reset.prevent="onReset" v-if="show">
+              <b-form @submit.prevent="submit('login')" @reset.prevent="onReset" v-if="show">
                 <b-form-group
                   id="input-group-1"
                   label="Email address:"
@@ -74,7 +74,7 @@
                     ></b-form-input>
                 </b-form-group>
 
-                <b-button type="button" variant="primary" v-on:click="submit('login')"><b-spinner small v-if="spinner.login"></b-spinner> Login</b-button>
+                <b-button type="submit" variant="primary"><b-spinner small v-if="spinner.login"></b-spinner> Login</b-button>
                 <b-button type="button" variant="secondary" v-on:click="submit('register')"><b-spinner small v-if="spinner.register"></b-spinner> Register</b-button>
 
                 <b-alert variant="danger" v-if="form.hasError" show class="mt-4" v-html="form.message"></b-alert>
@@ -85,16 +85,18 @@
       </b-container>
     </div>
 
-    {{#reset}}
+    <span id="app-base" style="display:none;">{| base |}</span>
+
+    {|# reset |}
     <script>localStorage.clear();window.history.replaceState({}, document.title, "/");</script>
-    {{/reset}}
+    {|/ reset |}
 
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver"></script>
-    <script src="https://unpkg.com/http-vue-loader"></script>
+    <script src="https://unpkg.com/http-vue-loader@1.4.2/src/httpVueLoader.js"></script>
 
-    <script src="https://unpkg.com/vue@latest/dist/vue.js"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue.js"></script>
-    <script src="https://unpkg.com/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue.min.js"></script>
+    <script src="https://unpkg.com/bootstrap-vue@2.21.2/dist/bootstrap-vue-icons.min.js"></script>
 
     <script src="javascripts/sodium.js"></script>
     <script src="javascripts/so-auth.js"></script>
