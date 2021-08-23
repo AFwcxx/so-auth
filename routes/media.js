@@ -1,3 +1,5 @@
+"use strict";
+
 // https://github.com/aheckmann/gridfs-stream
 
 var express = require('express');

@@ -1,3 +1,5 @@
+"use strict";
+
 window.verified = new Vue({
   el: '#app',
   data: {

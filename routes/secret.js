@@ -1,3 +1,5 @@
+"use strict";
+
 const tool = require('../modules/tool');
 const _SoAuth = require('../modules/so-auth').SoAuth;
 const SoAuthConfig = require('../configs/so-auth.json');

@@ -1,3 +1,5 @@
+"use strict";
+
 var createError = require('http-errors');
 var path = require('path');
 const mongo = require('../modules/mongodb');

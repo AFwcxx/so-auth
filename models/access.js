@@ -1,3 +1,5 @@
+"use strict";
+
 const mongo = require('../modules/mongodb');
 const db = mongo.getClient();
 

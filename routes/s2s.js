@@ -1,3 +1,5 @@
+"use strict";
+
 const _SoAuth = require('../modules/so-auth').SoAuth;
 const SoAuthConfig = require('../configs/so-auth.json');
 const mongo = require('../modules/mongodb');

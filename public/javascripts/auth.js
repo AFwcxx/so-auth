@@ -1,3 +1,5 @@
+"use strict";
+
 window.auth = new Vue({
   el: '#app',
   data: {

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
+"use strict";
 
 var mongoDb = require('../modules/mongodb');
 
-var app, debug, http, port, server;
+var app, http, port, server;
 
 mongoDb.connect().then(conn => {
   /**
@@ -10,7 +11,6 @@ mongoDb.connect().then(conn => {
    */
 
   app = require('../app');
-  debug = require('debug')('so-auth:server');
   http = require('http');
 
   /**
@@ -94,5 +94,5 @@ function onListening() {
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  console.log('Listening on ' + bind);
 }
