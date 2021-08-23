@@ -73,14 +73,6 @@ app.use(function(req, res, next) {
   }
 });
 
-// Add delay for negotiation to prevent brute force
-app.all('/soauth', function(req, res, next) {
-  let second = 2;
-  setTimeout(() => {
-    next();
-  }, second * 1000);
-});
-
 const secret = require('./configs/so-auth.json').passphrase;
 app.use(soAuth({
   secret: secret,
