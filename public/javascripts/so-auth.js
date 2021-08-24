@@ -230,6 +230,8 @@ class SoAuth {
         return jsonResponse.json();
       }).then(out => {
         res = out;
+      }).catch(err => {
+        console.error(err);
       });
 
       return res;
