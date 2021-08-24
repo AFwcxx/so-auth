@@ -11,6 +11,8 @@ class SoAuth {
     this.boxKeypair = options.boxKeypair ? options.boxKeypair : false;
 
     this.hostBoxPublicKey = options.hostBoxPublicKey ? options.hostBoxPublicKey : false;
+
+    this.ready = sodium.ready;
   }
 
 
