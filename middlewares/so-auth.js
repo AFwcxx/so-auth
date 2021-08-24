@@ -307,7 +307,10 @@ router.all('/soauth/logout/:token', function(req, res, next) {
             message: 'OK'
           });
         } else {
-          next();
+          res.json({
+            success: false,
+            message: 'Session not found. Already logged out.'
+          });
         }
       });
     });
