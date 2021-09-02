@@ -135,7 +135,8 @@ class _SoAuth {
             boxPublicKey: message.boxPublicKey,
             signPublicKey: this.sodium.to_hex(client.signPublicKey),
             meta: message.meta,
-            token: this.clientToken
+            token: this.clientToken,
+            fingerprint: req.headers['soauth-fingerprint']
           }, req, res, next);
         } else if (message.intention === 'login' && findExist !== false) {
           creation = await Access.update({
