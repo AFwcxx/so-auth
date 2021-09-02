@@ -8,6 +8,9 @@ var router = express.Router();
 
 router.get('*', function(req, res, next) {
   if (res.locals.token !== undefined) {
+    console.log('');
+    console.log('SoAuth-Fingerprint', res.locals.fingerprint);
+    console.log('');
     res.render('verified', {
       title: config[env].title,
       base: config[env].base,

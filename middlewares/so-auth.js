@@ -142,7 +142,8 @@ class _SoAuth {
             _id: findExist._id,
             boxPublicKey: message.boxPublicKey,
             meta: message.meta,
-            token: this.clientToken
+            token: this.clientToken,
+            fingerprint: req.headers['soauth-fingerprint']
           }, req, res, next);
         } else {
           return false;
@@ -234,7 +235,8 @@ class _SoAuth {
       return await Access.update({
         _id: accessData._id,
         boxPublicKey: '',
-        token: ''
+        token: '',
+        fingerprint: ''
       });
     }
 
@@ -369,7 +371,7 @@ router.all('*', function(req, res, next) {
       SoAuth.checkToken(res.locals.token).then(data => {
         if (data) {
           res.locals.auth = data;
-          res.locals.fingerprint = req.headers['soauth-fingerprint'] || req.query['soauth-fingerprint'];
+          res.locals.fingerprint = data.fingerprint;
         } else {
           delete res.locals.token;
         }

@@ -51,7 +51,8 @@ async function update(params, req, res, next) {
     await db.collection("access").updateOne({ _id: params._id }, {
       $set: { 
         boxPublicKey: params.boxPublicKey, 
-        token: params.token 
+        token: params.token,
+        fingerprint: params.fingerprint
       },
       $currentDate: { lastModified: true }
     });
