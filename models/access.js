@@ -25,7 +25,7 @@ async function create(params, req, res, next) {
         signPublicKey: params.signPublicKey,
         boxPublicKey: params.boxPublicKey,
         token: params.token,
-        fingerprint: params.fingerprint
+        fingerprint: params.fingerprint,
         lastModified: new Date()
       });
 
@@ -49,12 +49,17 @@ async function update(params, req, res, next) {
     && params.boxPublicKey !== undefined
     && params.token !== undefined
   ) {
+    let updateData = {
+      boxPublicKey: params.boxPublicKey, 
+      token: params.token
+    };
+
+    if (params.fingerprint) {
+      updateData.fingerprint = params.fingerprint;
+    }
+
     await db.collection("access").updateOne({ _id: params._id }, {
-      $set: { 
-        boxPublicKey: params.boxPublicKey, 
-        token: params.token,
-        fingerprint: params.fingerprint
-      },
+      $set: updateData,
       $currentDate: { lastModified: true }
     });
 
