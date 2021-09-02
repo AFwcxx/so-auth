@@ -25,7 +25,7 @@ async function create(params, req, res, next) {
         signPublicKey: params.signPublicKey,
         boxPublicKey: params.boxPublicKey,
         token: params.token,
-        fingerprint: params.fingerprint,
+        fingerprint: params.fingerprint || '',
         lastModified: new Date()
       });
 
