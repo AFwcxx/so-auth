@@ -325,9 +325,8 @@ class SoAuth {
         try{
           let webgl = new WebGl();
 
-          webgl.ready.then(() => {
-            SoAuth.hash = webgl.hash;
-          });
+          await webgl.ready;
+          SoAuth.hash = webgl.hash;
         } catch (err) {
           console.warn('WebGL not detected');
         }

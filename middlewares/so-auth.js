@@ -369,6 +369,7 @@ router.all('*', function(req, res, next) {
       SoAuth.checkToken(res.locals.token).then(data => {
         if (data) {
           res.locals.auth = data;
+          res.locals.fingerprint = req.headers['soauth-fingerprint'] || req.query['soauth-fingerprint'];
         } else {
           delete res.locals.token;
         }

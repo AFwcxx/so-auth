@@ -57,7 +57,7 @@ window.auth = new Vue({
 
     this.SoAuth.load().then(result => {
       if (result) {
-        window.location.replace("?soauth=" + this.SoAuth.token);
+        window.location.replace("?soauth=" + this.SoAuth.token + "&soauth-fingerprint=" + this.SoAuth.hash);
       }
     });
   }
