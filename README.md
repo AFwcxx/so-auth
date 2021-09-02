@@ -123,11 +123,13 @@ Promise bool function create(Object params, Router req, Router, res, Router next
   String params.boxPublicKey
   String params.signPublicKey
   String params.token
+  String params.fingerprint
   Object params.meta
 
 Promise bool function update(Object params, Router req, Router, res, Router next)
   String params.boxPublicKey
   String params.token
+  String params.fingerprint
   Object params.meta
 
 Promise Object function findOne(Object params, Router req, Router, res, Router next)
@@ -149,7 +151,7 @@ Promise Object function findOne(Object params, Router req, Router, res, Router n
 var soAuth = new SoAuth({
   hostSignPublicKey: 'server-signing-public-key',
   endpoint: 'http://localhost:3000/',
-  enableFingerprint: true // Optional - Using WebGL
+  enableFingerprint: true // Optional - Use WebGL
 });
 </script>
 
