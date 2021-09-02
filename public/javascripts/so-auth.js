@@ -12,7 +12,29 @@ class SoAuth {
 
     this.hostBoxPublicKey = options.hostBoxPublicKey ? options.hostBoxPublicKey : false;
 
-    this.ready = sodium.ready;
+    // WebGL Fingerprint
+    this.hash = options.hash ? options.hash : false;
+
+    if (options.enableFingerprint) {
+      try{
+        let _this = this;
+
+        sodium.ready.then(() => {
+          let webgl = new WebGl();
+
+          _this.ready = webgl.ready;
+
+          webgl.ready.then(() => {
+            _this.hash = webgl.hash;
+          });
+        });
+      } catch (err) {
+        console.warn('WebGL not detected');
+        this.ready = sodium.ready;
+      }
+    } else {
+      this.ready = sodium.ready;
+    }
   }
 
 
@@ -218,12 +240,14 @@ class SoAuth {
 
     if (message !== false) {
       let res = false;
+      let SoAuthFingerprint = this.hash;
 
       await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'SoAuth-Fingerprint': SoAuthFingerprint
         },
         body: message
       }).then(jsonResponse => {
@@ -297,6 +321,17 @@ class SoAuth {
         SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
         SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
 
+        // WebGL Fingerprint
+        try{
+          let webgl = new WebGl();
+
+          webgl.ready.then(() => {
+            SoAuth.hash = webgl.hash;
+          });
+        } catch (err) {
+          console.warn('WebGL not detected');
+        }
+
         return true;
       } else {
         localStorage.removeItem('so-auth-' + this.hostSignPublicKey);
@@ -312,7 +347,8 @@ class SoAuth {
       endpoint: this.endpoint,
       token: this.token,
       boxKeypair: this.boxKeypair,
-      hostBoxPublicKey: this.hostBoxPublicKey
+      hostBoxPublicKey: this.hostBoxPublicKey,
+      hash: this.hash
     });
   }
 

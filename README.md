@@ -148,7 +148,8 @@ Promise Object function findOne(Object params, Router req, Router, res, Router n
 <script>
 var soAuth = new SoAuth({
   hostSignPublicKey: 'server-signing-public-key',
-  endpoint: 'http://localhost:3000/'
+  endpoint: 'http://localhost:3000/',
+  enableFingerprint: true // Optional - Using WebGL
 });
 </script>
 
