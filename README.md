@@ -84,8 +84,7 @@ accessible only by token holders.
 | └── so-auth.js : SoAuth middleware file
 |
 ├── models
-| └── access.js : Handler that manage SoAuth clients' storage data and GridFS
-upload. MongoDB in this case.
+| └── access.js : Handler that manage SoAuth clients' storage data and GridFS upload. MongoDB in this case.
 |
 ├── modules
 | └── mongodb.js : MongoDB module
@@ -102,8 +101,7 @@ upload. MongoDB in this case.
 | └── * : Everything that resides here handle routes
 |
 ├── views
-| └── * : Everything that resides here handle views.
-This demo uses Mustache as template engine.
+| └── * : Everything that resides here handle views.  This demo uses Mustache as template engine.
 |
 ├── .gitignore
 ├── README.md
@@ -145,10 +143,7 @@ Example of additional useful features to have:
 - Create reference between your user model and the `signPublicKey`
 
 ```js
-// The meta parameter below is where you can use information sent from the
-client such as registration data - firstname, lastname, email, username and etc.
-Do note that this does not make your database private anymore unless it is encyrpted
-or hashed from the client side.
+// The meta parameter below is where you can use information sent from the client such as registration data - firstname, lastname, email, username and etc.  Do note that this does not make your database private anymore unless it is encyrpted or hashed from the client side.
 // By default meta will be an empty object
 
 Promise bool function create(Object params, Router req, Router, res, Router next)
@@ -172,8 +167,7 @@ Promise Object function findOne(Object params, Router req, Router, res, Router n
 
 [Optional] Express.Router Content function mediaFetchController(Object req,
 Object res, Object next)
-// req, res and next is the Express middleware/router variables. This function
-does not return anything, but pipe the output of the GridFS chunks to the res object
+// req, res and next is the Express middleware/router variables. This function does not return anything, but pipe the output of the GridFS chunks to the res object
 ```
 
 ### Using SoAuth browser
@@ -206,8 +200,7 @@ criteria, and using this information helps generate even more unique device id.
 ```js
 // Client:
 
-// The credential can be anything, just remember that it is used to create a
-deterministic signing key
+// The credential can be anything, just remember that it is used to create a deterministic signing key
 // Changing it's structure, format or data will create different key pairs
 // So you'll have to think ahead for your use-case
 
@@ -252,9 +245,8 @@ SoAuth.load().then(good => {
   }
 });
 
-// If the exchange is use multiple times in parallel, 
-it might conflict on the current stored object parameters.
-Use `clone` to clone the SoAuth object.
+// If the exchange is use multiple times in parallel, it might conflict on the current stored object parameters.
+// Use `clone` to clone the SoAuth object.
 
 SoAuth.clone().exchange('How many cups of sugar does it takes to get to the
 moon?', '/secret').then(response => {
@@ -267,8 +259,7 @@ moon?', '/secret').then(response => {
 });
 
 // Server:
-// The decryption is done automatically and can be accessed via
-res.locals.decrypted
+// The decryption is done automatically and can be accessed via res.locals.decrypted
 // res.locals.SoAuth, which is the SoAuth object is also available
 throughout the request cycle. This is used for encrypting data.
 
