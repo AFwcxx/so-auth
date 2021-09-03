@@ -31,28 +31,12 @@ static files only.
 | ------------- | ------------- |------------- |
 |  |  | Generate Signing key pairs and share the Signing public key to all
 clients. |
-| Has the server Signing public key. <br />Generate deterministic seed from
-inputs for Signing key pairs. <br />Generate random seed for Box key pairs and
-store in local storage.<br />Create a message that consists of it's own Box public
-key.<br />Sign the message with it's own Signing private key and send the
-signature and Signing public key as negotiation. | Has the client signature,
-signing public key and box public key  |  |
-|  |  | Receives the negotation request, validate the signature and Signing
-public key.<br />If valid, generate it's own Box key pairs and random Token.
-<br />Create a message that consists of it's own Box public key and random
-Token.<br />Sign the message with own Signing private key and reply to the
-client with only the signature. |
-| Receives the signature, use the server public key that it already has to
-validate whether the signature is really from the server. If valid, store the
-server box public key locally | Has the server signature and Box public key.
-<br /><br />Has the client token.  |  |
+| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, signing public key and box public key  |  |
+|  |  | Receives the negotation request, validate the signature and Signing public key.<br />If valid, generate it's own Box key pairs and random Token.  <br />Create a message that consists of it's own Box public key and random Token.<br />Sign the message with own Signing private key and reply to the client with only the signature. |
+| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server box public key locally | Has the server signature and Box public key.  <br /><br />Has the client token.  |  |
 | Negotation ends. Communication begins. |
-| Use it's own Box private key and server Box public key to encrypt message.
-<br />Send the ciphertext, nonce and token  |  | Use the token received to
-retrieve client Box public key and try decrypt it with it's own Box private key.
-|
-| | **In total, it may hold:**<br/><br />The client's Signing public key, Box
-public key and Token<br /><br />The server's Box public key | |
+| Use it's own Box private key and server Box public key to encrypt message.  <br />Send the ciphertext, nonce and token  |  | Use the token received to retrieve client Box public key and try decrypt it with it's own Box private key.  |
+| | **In total, it may hold:**<br/><br />The client's Signing public key, Box public key and Token<br /><br />The server's Box public key | |
 
 The Man in the Middle:
 
