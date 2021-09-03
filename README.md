@@ -72,7 +72,7 @@ The files and folders in the structure below is an example but SoAuth is expecti
 the `private` folder, used specifically to allow private static files
 accessible only by token holders.
 
-```sh
+```
 ├── bin
 | └── www : NodeJS executable file
 |
