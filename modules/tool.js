@@ -10,6 +10,7 @@ exports.arithmetic = arithmetic;
 exports.monthDiff = monthDiff;
 exports.post = post;
 exports.get = get;
+exports.intToStr = intToStr;
 
 
 function isJsonString(str) {
@@ -27,14 +28,39 @@ function ucWord(str) {
   });
 }
 
+function intToStr(num, decimal) {
+  let display = num;
+  let displayed = parseFloat(num / (10 ** decimal).toString());
+
+  if (!displayed.toString().includes('.')) {
+    displayed += '.0';
+  }
+
+  let display_array = displayed.toString().split('.');
+
+  if (display_array.length < 2) {
+    return false;
+  } else {
+    display = display_array[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + '.' + display_array[1].padEnd(decimal, '0');
+  }
+
+  return display;
+}
+
 function arithmetic(operation, a, b, decimal) {
-  a = a * parseInt(decimal);
-  b = b * parseInt(decimal);
+  // Replace coma if exists
+  let re = new RegExp(',', 'g');
+  a = parseFloat(a.toString().replace(re, ''));
+  b = parseFloat(b.toString().replace(re, ''));
+
+  // To integer
+  a = a * (10 ** decimal);
+  b = b * (10 ** decimal);
 
   if (operation === '+') {
-    return ((a + b) / parseInt(decimal)).toFixed(parseInt(decimal));
+    return intToStr(a + b, decimal);
   } else if (operation === '-') {
-    return ((a - b) / parseInt(decimal)).toFixed(parseInt(decimal));
+    return intToStr(a - b, decimal);
   } else {
     return false;
   }
