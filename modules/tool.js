@@ -108,6 +108,11 @@ function httpGet(url, getData, headers) {
       if (typeof getData !== 'string') {
         getData = JSON.stringify(getData);
       }
+
+      req.on('error', function (error) {
+        reject(error);
+      });
+
       req.write(getData);
       req.end();
     } else {
@@ -182,6 +187,10 @@ function httpPost(url, postData, headers) {
       postData = JSON.stringify(postData);
     }
 
+    req.on('error', function (error) {
+      reject(error);
+    });
+
     req.write(postData);
     req.end();
   });
@@ -234,6 +243,11 @@ function httpsGet(url, getData, headers) {
       if (typeof getData !== 'string') {
         getData = JSON.stringify(getData);
       }
+
+      req.on('error', function (error) {
+        reject(error);
+      });
+
       req.write(getData);
       req.end();
     } else {
@@ -306,6 +320,10 @@ function httpsPost(url, postData, headers) {
     if (typeof postData !== 'string') {
       postData = JSON.stringify(postData);
     }
+
+    req.on('error', function (error) {
+      reject(error);
+    });
 
     req.write(postData);
     req.end();
