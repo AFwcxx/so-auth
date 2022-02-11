@@ -117,7 +117,8 @@ accessible only by token holders.
 var SoAuth = require('./middlewares/so-auth');
 app.use(SoAuth({
   secret: 'super-secure-secret',
-  handler: require('./models/access')
+  handler: require('./models/access'),
+  servingHostIds: ['hostId_1', 'hostId_2']
 }));
 
 /*
@@ -126,6 +127,11 @@ handler:
 or callbacks to other objects or functions.
 - This can be anything really for as long as the requirement is fulfilled, refer
 next section.
+
+servingHostIds:
+- Allow multiple platform to connect using the same Signing key pairs but
+dedicated Box key pairs within the same database.
+- Useful to allow the same user credential to login but with unique encryption
 
 Note: When the server starts, it will display the signing public key in the console.
 */
@@ -176,6 +182,7 @@ Object res, Object next)
 <script src="../javascripts/so-auth.js"></script>
 <script>
 var SoAuth = new SoAuth({
+  hostId: 'hostId_1',
   hostSignPublicKey: 'server-signing-public-key',
   endpoint: 'http://localhost:3000/',
   enableFingerprint: true // Optional - Use WebGL
