@@ -2,6 +2,7 @@
 
 class SoAuth {
   constructor(options) {
+    this.hostId = options.hostId;
     this.hostSignPublicKey = options.hostSignPublicKey;
     this.endpoint = options.endpoint;
 
@@ -86,6 +87,7 @@ class SoAuth {
 
   async _sign(meta, intention, signKeypair) {
     let message = this._refineMessage({
+      hostId: this.hostId,
       intention: intention,
       boxPublicKey: sodium.to_hex(this.boxKeypair.publicKey),
       serverSignPublicKey: this.hostSignPublicKey,

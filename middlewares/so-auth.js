@@ -13,6 +13,7 @@ var Access = false;
 var Config = {
   secret: false,
   signKeypair: false,
+  servingHostIds: false
 };
 
 class _SoAuth {
@@ -120,6 +121,10 @@ class _SoAuth {
           return false;
         }
 
+        if (!Config.servingHostIds.includes(message.hostId)) {
+          return false;
+        }
+
         // create seed
         let seed = await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, Config.secret);
 
@@ -130,20 +135,34 @@ class _SoAuth {
         let findExist = await Access.findOne({ signPublicKey: this.sodium.to_hex(client.signPublicKey), message: message }, req, res, next);
         let creation = false;
 
+        let tokens = (findExist !== false && typeof findExist.tokens === 'object') ? findExist.tokens : {};
+        let boxPublicKeys = (findExist !== false && typeof findExist.boxPublicKeys === 'object') ? findExist.boxPublicKeys : {};
+        let lastModifieds = (findExist !== false && typeof findExist.lastModifieds === 'object') ? findExist.lastModifieds : {};
+
+        tokens[message.hostId] = this.clientToken;
+        boxPublicKeys[message.hostId] = message.boxPublicKey;
+        lastModifieds[message.hostId] = new Date();
+
         if (message.intention === 'register' && findExist === false) {
           creation = await Access.create({
             boxPublicKey: message.boxPublicKey,
+            boxPublicKeys: boxPublicKeys,
             signPublicKey: this.sodium.to_hex(client.signPublicKey),
             meta: message.meta,
             token: this.clientToken,
+            tokens: tokens,
+            lastModifieds: lastModifieds,
             fingerprint: req.headers['soauth-fingerprint']
           }, req, res, next);
         } else if (message.intention === 'login' && findExist !== false) {
           creation = await Access.update({
             _id: findExist._id,
             boxPublicKey: message.boxPublicKey,
+            boxPublicKeys: boxPublicKeys,
             meta: message.meta,
             token: this.clientToken,
+            tokens: tokens,
+            lastModifieds: lastModifieds,
             fingerprint: req.headers['soauth-fingerprint']
           }, req, res, next);
         } else {
@@ -158,7 +177,7 @@ class _SoAuth {
         let accessData = await Access.findOne({ signPublicKey: this.sodium.to_hex(client.signPublicKey) });
 
         // Always differ on every new session
-        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + accessData.lastModified.getTime());
+        let boxSeed = await this.sodium.crypto_generichash(this.sodium.crypto_box_SEEDBYTES, seed + accessData.lastModifieds[message.hostId].getTime());
         this.boxKeypair = await this.sodium.crypto_box_seed_keypair(boxSeed);
 
         return await this._introduce(message.intention);
@@ -226,17 +245,79 @@ class _SoAuth {
 
   // Token process
   async checkToken(token) {
-    return await Access.findOne({ token: token });
+    let orParams = [];
+
+    orParams.push({ token: token });
+
+    for (let i = 0; i < Config.servingHostIds.length; i++) {
+      let tokens = {};
+      tokens['tokens.' + Config.servingHostIds[i]] = token;
+      orParams.push(tokens);
+    }
+
+    let found = await Access.findOne({
+      $or: orParams
+    });
+
+    if (found) {
+      found.token = token;
+
+      if (found.tokens) {
+        let boxPublicKeys = (typeof found.boxPublicKeys === 'object') ? found.boxPublicKeys : {};
+        let lastModifieds = (typeof found.lastModifieds === 'object') ? found.lastModifieds : {};
+
+        for (var k in found.tokens) {
+          if (found.tokens.hasOwnProperty(k) && found.tokens[k] === token) {
+            if (boxPublicKeys[k]) {
+              found.boxPublicKey = boxPublicKeys[k];
+            }
+
+            if (lastModifieds[k]) {
+              found.lastModified = lastModifieds[k];
+            }
+          }
+        }
+      }
+    }
+
+    return found;
   }
 
   // Logout
   async logout(token) {
-    let accessData = await Access.findOne({ token: token });
+    let orParams = [];
+
+    for (let i = 0; i < Config.servingHostIds.length; i++) {
+      let tokens = {};
+      tokens['tokens.' + Config.servingHostIds[i]] = token;
+      orParams.push(tokens);
+    }
+
+    let accessData = await Access.findOne({
+      $or: orParams
+    });
+
     if (accessData) {
+      let tokens = (typeof accessData.tokens === 'object') ? accessData.tokens : {};
+      let boxPublicKeys = (accessData !== false && typeof accessData.boxPublicKeys === 'object') ? accessData.boxPublicKeys : {};
+      let lastModifieds = (accessData !== false && typeof accessData.lastModifieds === 'object') ? accessData.lastModifieds : {};
+
+      for (var k in tokens) {
+        if (tokens.hasOwnProperty(k) && tokens[k] === token) {
+          tokens[k] = '';
+          boxPublicKeys[k] = '';
+          lastModifieds[k] = '';
+          break;
+        }
+      }
+
       return await Access.update({
         _id: accessData._id,
         boxPublicKey: '',
+        boxPublicKeys: boxPublicKeys,
         token: '',
+        tokens: tokens,
+        lastModifieds: lastModifieds,
         fingerprint: ''
       });
     }
@@ -256,6 +337,12 @@ module.exports = function (options) {
   }
 
   Config.secret = options.secret;
+
+  if (options.servingHostIds === undefined) {
+    throw new Error('Must provide SoAuth servingHostIds');
+  }
+
+  Config.servingHostIds = options.servingHostIds;
 
   if (options.handler === undefined) {
     throw new Error('Handler not provided.');

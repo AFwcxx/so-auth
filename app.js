@@ -74,9 +74,11 @@ app.use(function(req, res, next) {
 });
 
 const secret = require('./configs/so-auth.json').passphrase;
+const servingHostIds = require('./configs/so-auth.json').servingHostIds;
 app.use(soAuth({
   secret: secret,
-  handler: require('./models/access')
+  handler: require('./models/access'),
+  servingHostIds: servingHostIds
 }));
 
 // APIs

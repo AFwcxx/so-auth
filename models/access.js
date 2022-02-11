@@ -15,8 +15,11 @@ async function create(params, req, res, next) {
   if (
     typeof params === 'object'
     && params.boxPublicKey !== undefined
+    && params.boxPublicKeys !== undefined
     && params.signPublicKey !== undefined
     && params.token !== undefined
+    && params.tokens !== undefined
+    && params.lastModifieds !== undefined
   ) {
     let foundOne = await findOne({ signPublicKey: params.signPublicKey });
 
@@ -24,9 +27,12 @@ async function create(params, req, res, next) {
       let insertRes = await db.collection("access").insertOne({
         signPublicKey: params.signPublicKey,
         boxPublicKey: params.boxPublicKey,
+        boxPublicKeys: params.boxPublicKeys,
         token: params.token,
+        tokens: params.tokens,
         fingerprint: params.fingerprint || '',
-        lastModified: new Date()
+        lastModified: new Date(),
+        lastModifieds: params.lastModifieds
       });
 
       if (params.meta !== undefined) {
@@ -47,11 +53,17 @@ async function update(params, req, res, next) {
     typeof params === 'object'
     && params._id !== undefined
     && params.boxPublicKey !== undefined
+    && params.boxPublicKeys !== undefined
     && params.token !== undefined
+    && params.tokens !== undefined
+    && params.lastModifieds !== undefined
   ) {
     let updateData = {
       boxPublicKey: params.boxPublicKey, 
-      token: params.token
+      boxPublicKeys: params.boxPublicKeys, 
+      token: params.token,
+      tokens: params.tokens,
+      lastModifieds: params.lastModifieds
     };
 
     if (params.fingerprint) {
