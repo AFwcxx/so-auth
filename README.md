@@ -179,7 +179,7 @@ Object res, Object next)
 ### Using SoAuth browser
 
 ```html
-<script src="../javascripts/so-auth.js"></script>
+<script src="/javascripts/so-auth.js"></script>
 <script>
 var SoAuth = new SoAuth({
   hostId: 'hostId_1',
@@ -190,7 +190,7 @@ var SoAuth = new SoAuth({
 </script>
 
 // This is how to retrieve private file using token
-<link href="../private/stylesheets/verified.css?soauth={{token}}" rel="stylesheet">
+<link href="/private/stylesheets/verified.css?soauth={{token}}" rel="stylesheet">
 ```
 
 #### WebGL Fingerprint
