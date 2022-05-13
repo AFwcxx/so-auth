@@ -260,6 +260,13 @@ class SoAuth {
         console.error(err);
       });
 
+      if (typeof res === 'object' && res.success !== undefined && res.message !== undefined) {
+        if (!res.success && res.message.includes('Expired fingerprint')) {
+          await this.logout();
+          window.location.reload();
+        }
+      }
+
       return res;
     }
   }

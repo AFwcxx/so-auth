@@ -520,23 +520,38 @@ router.all('*', function(req, res, next) {
     && req.body.token !== undefined
   ) {
     let SoAuth = new _SoAuth(Config.secret);
+    let fingerprintOk = true;
 
-    SoAuth.setup().then(() => {
-      SoAuth.decrypt({
-        ciphertext: req.body.ciphertext,
-        nonce: req.body.nonce,
-        token: req.body.token
-      }).then(decrypted => {
-        if (decrypted) {
-          res.locals.decrypted = decrypted;
-          res.locals.SoAuth = SoAuth;
+    if (req.headers['soauth-fingerprint']) {
+      let currentFingerprint = res.locals.fingerprint;
 
-          next();
-        } else {
-          next(new Error('Invalid access'));
-        }
+      res.locals.fingerprint = req.headers['soauth-fingerprint'];
+
+      if (currentFingerprint !== res.locals.fingerprint) {
+        fingerprintOk = false;
+      }
+    }
+
+    if (fingerprintOk) {
+      SoAuth.setup().then(() => {
+        SoAuth.decrypt({
+          ciphertext: req.body.ciphertext,
+          nonce: req.body.nonce,
+          token: req.body.token
+        }).then(decrypted => {
+          if (decrypted) {
+            res.locals.decrypted = decrypted;
+            res.locals.SoAuth = SoAuth;
+
+            next();
+          } else {
+            next(new Error('Invalid access'));
+          }
+        });
       });
-    });
+    } else {
+      next(new Error('Expired fingerprint'));
+    }
   } else {
     next();
   }
