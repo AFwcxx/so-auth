@@ -18,15 +18,16 @@ class SoAuth {
 
     if (options.enableFingerprint) {
       try{
-        let _this = this;
+        this.ready = new Promise(resolve => {
+          let _this = this;
 
-        sodium.ready.then(() => {
-          let webgl = new WebGl();
+          sodium.ready.then(() => {
+            let webgl = new WebGl();
 
-          _this.ready = webgl.ready;
-
-          webgl.ready.then(() => {
-            _this.hash = webgl.hash;
+            webgl.ready.then(() => {
+              _this.hash = webgl.hash;
+              resolve(true);
+            });
           });
         });
       } catch (err) {
@@ -134,7 +135,7 @@ class SoAuth {
   }
 
   async negotiate(credential, intention, meta = {}) {
-    await sodium.ready;
+    await this.ready;
 
     this.meta = meta;
 
@@ -204,7 +205,7 @@ class SoAuth {
   }
 
   async exchange(message, pathname) {
-    await sodium.ready;
+    await this.ready;
 
     if (typeof message === 'string') {
       message = message.trim();
@@ -295,7 +296,7 @@ class SoAuth {
   }
 
   async load(credential) {
-    await sodium.ready;
+    await this.ready;
 
     if (credential === undefined) {
       credential = localStorage.getItem('so-auth-' + this.hostSignPublicKey);
