@@ -131,7 +131,7 @@ class SoAuth {
       }
     }
     
-    return false;
+    return data;
   }
 
   async negotiate(credential, intention, meta = {}) {
