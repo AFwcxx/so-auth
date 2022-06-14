@@ -402,7 +402,11 @@ router.all('/soauth/logout/:token', function(req, res, next) {
             message: 'Session not found. Already logged out.'
           });
         }
+      }).catch(err => {
+        next(err);
       });
+    }).catch(err => {
+      next(err);
     });
   } else {
     next();
@@ -423,7 +427,11 @@ router.all('/soauth', function(req, res, next) {
         signPublicKey: req.body.signPublicKey
       }, req, res, next).then(introduce => {
         res.json(introduce);
+      }).catch(err => {
+        next(err);
       });
+    }).catch(err => {
+      next(err);
     });
   } else {
     next();
@@ -464,7 +472,11 @@ router.all('*', function(req, res, next) {
           delete res.locals.token;
         }
         next();
+      }).catch(err => {
+        next(err);
       });
+    }).catch(err => {
+      next(err);
     });
   } else {
     next();
@@ -547,7 +559,11 @@ router.all('*', function(req, res, next) {
           } else {
             next(new Error('Invalid access'));
           }
+        }).catch(err => {
+          next(err);
         });
+      }).catch(err => {
+        next(err);
       });
     } else {
       next(new Error('Expired fingerprint'));
