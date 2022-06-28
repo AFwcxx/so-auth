@@ -229,16 +229,46 @@ class _SoAuth {
 
         this.clientBoxPublicKey = this.sodium.from_hex(accessData.boxPublicKey);
 
-        if (decrypted) {
-          try {
-            return JSON.parse(this.sodium.to_string(decrypted));
-          } catch (err) {
-            return this.sodium.to_string(decrypted);
+        try {
+          if (decrypted) {
+            let decryptedString = this.sodium.to_string(decrypted);
+            let hash = (await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, decryptedString)).toString();
+
+            if (typeof accessData.hashLock === 'object') {
+              let now = new Date();
+              let diffInMs = Math.abs(now - accessData.hashLock.ts);
+              let seconds = diffInMs / 1000;
+
+              if (hash === accessData.hashLock.hash && seconds < 3) {
+                throw new Error('Too many same requests within short period of time.');
+              }
+            }
+
+            await Access.update({
+              _id: accessData._id,
+              boxPublicKey: accessData.boxPublicKey,
+              boxPublicKeys: accessData.boxPublicKeys,
+              token: accessData.token,
+              tokens: accessData.tokens,
+              lastModifieds: accessData.lastModifieds,
+              hashLock: {
+                hash: hash,
+                ts: new Date()
+              }
+            });
+
+            try {
+              return JSON.parse(decryptedString);
+            } catch (err) {
+              return decryptedString;
+            }
           }
+        } catch (err) {
+          console.log('SoAuth middleware error:', err);
         }
       }
     }
-    
+
     return false;
   }
 
