@@ -70,10 +70,6 @@ async function update(params, req, res, next) {
       updateData.fingerprint = params.fingerprint;
     }
 
-    if (params.hashLock) {
-      updateData.hashLock = params.hashLock;
-    }
-
     await db.collection("access").updateOne({ _id: params._id }, {
       $set: updateData,
       $currentDate: { lastModified: true }

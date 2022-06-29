@@ -8,6 +8,8 @@ const router = express.Router();
 const path = require('path');
 const url  = require('url');
 const fs = require('fs');
+const NodeCache = require( "node-cache" );
+const myCache = new NodeCache();
 
 var Access = false;
 var Config = {
@@ -234,27 +236,21 @@ class _SoAuth {
             let decryptedString = this.sodium.to_string(decrypted);
             let hash = (await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, decryptedString)).toString();
 
-            if (typeof accessData.hashLock === 'object') {
+            let cacheData = myCache.get('access-id:' + accessData._id.toString());
+
+            if (cacheData && typeof cacheData === 'object') {
               let now = new Date();
-              let diffInMs = Math.abs(now - accessData.hashLock.ts);
+              let diffInMs = Math.abs(now - cacheData.ts);
               let seconds = diffInMs / 1000;
 
-              if (hash === accessData.hashLock.hash && seconds < 3) {
+              if (hash === cacheData.hash && seconds < 3) {
                 throw new Error('Too many same requests within short period of time.');
               }
             }
 
-            await Access.update({
-              _id: accessData._id,
-              boxPublicKey: accessData.boxPublicKey,
-              boxPublicKeys: accessData.boxPublicKeys,
-              token: accessData.token,
-              tokens: accessData.tokens,
-              lastModifieds: accessData.lastModifieds,
-              hashLock: {
-                hash: hash,
-                ts: new Date()
-              }
+            myCache.set('access-id:' + accessData._id.toString(), {
+              hash: hash,
+              ts: new Date()
             });
 
             try {
