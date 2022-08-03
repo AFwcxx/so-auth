@@ -4,14 +4,14 @@
       "database": "so-auth",
       "username": "",
       "password": "",
-      "hostname": "localhost",
+      "hostname": "192.168.122.69",
       "port": "27017"
     },
     "production": {
       "database": "so-auth",
       "username": "",
       "password": "",
-      "hostname": "",
+      "hostname": "localhost",
       "port": "27017"
     }
   },

@@ -2,31 +2,33 @@
 
 const env = process.env.NODE_ENV || 'development';
 const config = require('./configs/default.json');
+const frontendReplace = require('./configs/so-auth.json').frontendReplace;
 
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-var helmet = require('helmet');
-var publicIp = require('public-ip');
-var useragent = require('express-useragent');
-var mustacheExpress = require('mustache-express');
+const fs = require('fs');
+const createError = require('http-errors');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const helmet = require('helmet');
+const publicIp = require('public-ip');
+const useragent = require('express-useragent');
+const mustacheExpress = require('mustache-express');
 
-var soAuth = require('./middlewares/so-auth');
+const soAuth = require('./middlewares/so-auth');
 
 // APIs
-var secretRouter = require('./routes/api/secret');
-var mediaRouter = require('./routes/api/media');
+const secretRouter = require('./routes/api/secret');
+const mediaRouter = require('./routes/api/media');
 
 // S2S
-var s2sIndexRouter = require('./routes/s2s/index');
-var s2sAccessRouter = require('./routes/s2s/access');
+const s2sIndexRouter = require('./routes/s2s/index');
+const s2sAccessRouter = require('./routes/s2s/access');
 
 // Views
-var indexRouter = require('./routes/index');
+const indexRouter = require('./routes/index');
 
-var app = express();
+const app = express();
 
 app.use(helmet({
   contentSecurityPolicy: false
@@ -42,6 +44,32 @@ app.set('view engine', 'html');
 app.use(logger('dev'));
 app.use(cookieParser());
 app.use(useragent.express());
+
+// Overwrite the SoAuth pubkey on the front end config
+const frontEndList = [
+  '/javascripts/auth.js',
+  '/private/javascripts/verified.js'
+];
+
+app.use(frontEndList, function(req, res) {
+  let lePath = req.originalUrl.split('?')[0];
+
+  if (!lePath.includes('private')) {
+    lePath = '/public' + lePath;
+  }
+
+  fs.readFile(path.join(__dirname, lePath), 'utf8', function (err, data) {
+    if (err) {
+      res.sendStatus(404);
+    } else {
+      // Replace soauth pubkey
+      data = data.replace('<cokeeps-wallet-soauth-pubkey>', frontendReplace);
+
+      res.type('.js');
+      res.send(data);
+    }
+  });
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 

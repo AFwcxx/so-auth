@@ -51,7 +51,7 @@ window.auth = new Vue({
   mounted: function() {
     this.SoAuth = new SoAuth({
       hostId: 'self',
-      hostSignPublicKey: '31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b',
+      hostSignPublicKey: '<cokeeps-wallet-soauth-pubkey>',
       endpoint: document.getElementById("app-base").textContent,
       enableFingerprint: true
     });
