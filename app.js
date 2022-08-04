@@ -63,7 +63,7 @@ app.use(frontEndList, function(req, res) {
       res.sendStatus(404);
     } else {
       // Replace soauth pubkey
-      data = data.replace('<cokeeps-wallet-soauth-pubkey>', frontendReplace);
+      data = data.replace('<wallet-soauth-pubkey>', frontendReplace);
 
       res.type('.js');
       res.send(data);
