@@ -3,6 +3,7 @@
 window.auth = new Vue({
   el: '#app',
   data: {
+    loading: true,
     show: true,
     form: {
       password: 'VeRy-h@rd_p@s$w0rD',
@@ -59,6 +60,8 @@ window.auth = new Vue({
     this.SoAuth.load().then(result => {
       if (result) {
         window.location.replace("?soauth=" + this.SoAuth.token);
+      } else {
+        this.loading = false;
       }
     });
   }
