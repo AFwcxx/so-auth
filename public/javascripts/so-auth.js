@@ -6,15 +6,15 @@ class SoAuth {
     this.hostSignPublicKey = options.hostSignPublicKey;
     this.endpoint = options.endpoint;
 
-    this.meta = options.meta ? options.meta: false;
-    this.token = options.token ? options.token : false;
-    this.boxSeed = options.boxSeed ? options.boxSeed : false;
-    this.boxKeypair = options.boxKeypair ? options.boxKeypair : false;
-
-    this.hostBoxPublicKey = options.hostBoxPublicKey ? options.hostBoxPublicKey : false;
+    this.meta = options.meta ||  false;
+    this.token = options.token ||  false;
+    this.boxSeed = options.boxSeed ||  false;
+    this.boxKeypair = options.boxKeypair ||  false;
+    this.hostBoxPublicKey = options.hostBoxPublicKey ||  false;
+    this.expiredReload = options.expiredReload ??  true;
 
     // WebGL Fingerprint
-    this.hash = options.hash ? options.hash : false;
+    this.hash = options.hash || false;
 
     if (options.enableFingerprint) {
       try{
@@ -264,7 +264,10 @@ class SoAuth {
       if (typeof res === 'object' && res.success !== undefined && res.message !== undefined) {
         if (!res.success && res.message.includes('Expired fingerprint')) {
           await this.logout();
-          window.location.reload();
+
+          if (this.expiredReload) {
+            window.location.reload();
+          }
         }
       }
 
@@ -285,6 +288,7 @@ class SoAuth {
       token: this.token,
       boxSeed: sodium.to_hex(this.boxSeed),
       hostBoxPublicKey: sodium.to_hex(this.hostBoxPublicKey),
+      expiredReload: this.expiredReload,
       ts: new Date()
     };
 
@@ -313,6 +317,7 @@ class SoAuth {
       && credential.token !== undefined
       && credential.boxSeed !== undefined
       && credential.hostBoxPublicKey !== undefined
+      && credential.expiredReload !== undefined
       && credential.ts !== undefined
     ) {
       let timestamp = Math.round(new Date().getTime() / 1000);
@@ -330,6 +335,7 @@ class SoAuth {
         SoAuth.token = credential.token;
         SoAuth.boxKeypair = sodium.crypto_box_seed_keypair(sodium.from_hex(credential.boxSeed));
         SoAuth.hostBoxPublicKey = sodium.from_hex(credential.hostBoxPublicKey);
+        SoAuth.expiredReload = credential.expiredReload;
 
         // WebGL Fingerprint
         try{
@@ -365,7 +371,7 @@ class SoAuth {
     let response = await this._send('', { pathname: '/soauth/logout/' + this.token });
 
     if (response.success === true) {
-      localStorage.removeItem('so-auth-' + this.hostSignPublicKey);
+      localStorage.clear();
       return true;
     }
 
