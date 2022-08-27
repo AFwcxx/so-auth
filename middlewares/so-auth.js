@@ -231,9 +231,10 @@ class _SoAuth {
 
         this.clientBoxPublicKey = this.sodium.from_hex(accessData.boxPublicKey);
 
-        try {
-          if (decrypted) {
-            let decryptedString = this.sodium.to_string(decrypted);
+        if (decrypted) {
+          let decryptedString = this.sodium.to_string(decrypted);
+
+          if (Config.blockRepeatedRequests === true) {
             let hash = (await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, decryptedString)).toString();
 
             let cacheData = myCache.get('access-id:' + accessData._id.toString());
@@ -252,15 +253,13 @@ class _SoAuth {
               hash: hash,
               ts: new Date()
             });
-
-            try {
-              return JSON.parse(decryptedString);
-            } catch (err) {
-              return decryptedString;
-            }
           }
-        } catch (err) {
-          console.log('SoAuth middleware error:', err);
+
+          try {
+            return JSON.parse(decryptedString);
+          } catch (err) {
+            return decryptedString;
+          }
         }
       }
     }
@@ -373,6 +372,8 @@ module.exports = function (options) {
   if (options.handler === undefined) {
     throw new Error('Handler not provided.');
   }
+
+  Config.blockRepeatedRequests = options.blockRepeatedRequests ?? true;
 
   if (
     typeof options.handler === 'object'
