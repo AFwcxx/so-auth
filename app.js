@@ -106,7 +106,8 @@ const servingHostIds = require('./configs/so-auth.json').servingHostIds;
 app.use(soAuth({
   secret: secret,
   handler: require('./models/access'),
-  servingHostIds: servingHostIds
+  servingHostIds: servingHostIds,
+  user: false
 }));
 
 // APIs

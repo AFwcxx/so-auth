@@ -12,6 +12,7 @@ const NodeCache = require( "node-cache" );
 const myCache = new NodeCache();
 
 var Access = false;
+var User = false;
 var Config = {
   secret: false,
   signKeypair: false,
@@ -231,35 +232,39 @@ class _SoAuth {
 
         this.clientBoxPublicKey = this.sodium.from_hex(accessData.boxPublicKey);
 
-        if (decrypted) {
-          let decryptedString = this.sodium.to_string(decrypted);
+        try {
+          if (decrypted) {
+            let decryptedString = this.sodium.to_string(decrypted);
 
-          if (Config.blockRepeatedRequests === true) {
-            let hash = (await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, decryptedString)).toString();
+            if (Config.blockRepeatedRequests === true) {
+              let hash = (await this.sodium.crypto_generichash(this.sodium.crypto_generichash_BYTES_MAX, decryptedString)).toString();
 
-            let cacheData = myCache.get('access-id:' + accessData._id.toString());
+              let cacheData = myCache.get('access-id:' + accessData._id.toString());
 
-            if (cacheData && typeof cacheData === 'object') {
-              let now = new Date();
-              let diffInMs = Math.abs(now - cacheData.ts);
-              let seconds = diffInMs / 1000;
+              if (cacheData && typeof cacheData === 'object') {
+                let now = new Date();
+                let diffInMs = Math.abs(now - cacheData.ts);
+                let seconds = diffInMs / 1000;
 
-              if (hash === cacheData.hash && seconds < 3) {
-                throw new Error('Too many same requests within short period of time.');
+                if (hash === cacheData.hash && seconds < 3) {
+                  throw new Error('Too many same requests within short period of time.');
+                }
               }
+
+              myCache.set('access-id:' + accessData._id.toString(), {
+                hash: hash,
+                ts: new Date()
+              });
             }
 
-            myCache.set('access-id:' + accessData._id.toString(), {
-              hash: hash,
-              ts: new Date()
-            });
+            try {
+              return JSON.parse(decryptedString);
+            } catch (err) {
+              return decryptedString;
+            }
           }
-
-          try {
-            return JSON.parse(decryptedString);
-          } catch (err) {
-            return decryptedString;
-          }
+        } catch (err) {
+          console.log('SoAuth middleware error:', err);
         }
       }
     }
@@ -336,6 +341,10 @@ class _SoAuth {
         }
       }
 
+      if (User) {
+        await User.logout(accessData._id);
+      }
+
       return await Access.update({
         _id: accessData._id,
         boxPublicKey: '',
@@ -363,17 +372,23 @@ module.exports = function (options) {
 
   Config.secret = options.secret;
 
+  // ==
+
   if (options.servingHostIds === undefined) {
     throw new Error('Must provide SoAuth servingHostIds');
   }
 
   Config.servingHostIds = options.servingHostIds;
 
+  // ==
+
+  Config.blockRepeatedRequests = options.blockRepeatedRequests ?? true;
+
+  // ==
+
   if (options.handler === undefined) {
     throw new Error('Handler not provided.');
   }
-
-  Config.blockRepeatedRequests = options.blockRepeatedRequests ?? true;
 
   if (
     typeof options.handler === 'object'
@@ -392,6 +407,18 @@ module.exports = function (options) {
   }
 
   Access = options.handler;
+
+  // ==
+
+  if (typeof options.user === 'object') {
+    if (typeof options.user.logout === 'function') {
+      User = options.user;
+    } else {
+      throw new Error('User does not meet specifications.');
+    }
+  }
+
+  // ==
 
   let SoAuth = new _SoAuth(Config.secret);
   SoAuth.setup().then(sodium => {
