@@ -30,35 +30,37 @@ static files only.
 |  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
 | ------------- | ------------- |------------- |
 |  |  | Generate Signing key pairs and share the Signing public key to all clients. |
-| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, Signing public key and Box public key  |  |
+| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, Signing public key.  |  |
 |  |  | Receives the negotation request, validate the signature and Signing public key.<br />If valid, generate it's own Box key pairs and random Token.  <br />Create a message that consists of it's own Box public key and random Token.<br />Sign the message with own Signing private key and reply to the client with only the signature. |
-| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server Box public key locally | Has the server signature and Box public key.  <br /><br />Has the client Token.  |  |
+| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server Box public key locally | Has the server signature.  <br /><br />Has the client Token.  |  |
 | Negotation ends. Communication begins. |
 | Use it's own Box private key and server Box public key to encrypt message.  <br />Send the ciphertext, nonce and Token  |  | Use the Token received to retrieve client Box public key and try decrypt it with it's own Box private key.  |
-| | **In total, it may hold:**<br/><br />The client's Signing public key, Box public key and Token<br /><br />The server's Box public key | |
+| | **In total, it may hold:**<br/><br />The client's Signing public key, signature and Token<br /><br />The server's signature | |
 
 The Man in the Middle:
 
-- Replaying the signing process with it's own signature to provide it's own
+- Replaying the client signing process with it's own signature to provide it's own
 Box public key will only become a new identity since it cannot provide the
 client's Signing public key (identity) and have a valid signature.
 - Replaying the signing process as the server will only generate invalid
 signature when the client validates it.
 - Passing the client's Token with it's own ciphertext and nonce
 (using it's own Box key pairs) in the communication will only point the server
-to retrieve the incorrect public key and will not able to decrypt the ciphertext.
+to retrieve the invalid or non-exist public key and will not able to decrypt the ciphertext.
 - Since the Token lifetime is until the next signing process, Tokens
 should NEVER be used to retrieve sensitive information.
-Only static files such as javascript, stylesheet or html in private scope.
+Only static files such as javascript, json, stylesheet or html in private scope. 
+Useful to isolate contents that should only be retrievable post authenticated.
 
 About the Persistent mode:
 
-- Client uses local storage to store only the Box key pairs.
+- Client uses local storage (or any secured storage method) to store only the Box key pairs.
 Never the signing key pairs.
 - Box key pairs lifetime is until the next signing process or
 when the local storage is cleared.
 - If the local storage is compromised or Box key pairs is copied,
 logout or re-negotiate.
+- <b>DO NOT</b> store Signing private key as that is the client identity.
 
 ## Specifications
 
@@ -415,9 +417,9 @@ SoAuth.setup().then(() => {
 });
 ```
 
-## Source Code
+## Build your own
 
-### SoAuth
+### SoAuth components
 
 - [Express Middleware](https://github.com/AFwcxx/so-auth/blob/master/middlewares/so-auth.js)
 - [Browser](https://github.com/AFwcxx/so-auth/blob/master/public/javascripts/so-auth.js)
