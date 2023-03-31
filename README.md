@@ -19,8 +19,8 @@ Users and permissions are not covered in this demo but can be implemented easily
 
 There are 3 main keypoints:
 
-- **Signing keys:** Deterministic and not stored anywhere. Used for identity. Sender sign and ecnrypt a message with private key and obtain a signature. Recipient validate the signature and decrypt content with sender public key. Similar to RSA without signature.
-- **Box keys:** Random on every negotation. Used for encrypted communications. Optional to store in local storage for persistent. Sender encrypt message with its private key, recipient's public key and a nonce. Recipient decrypt message with sender's public key, it's own private key and the nonce used by sender. More secure than RSA.
+- **Signing keys:** Deterministic and not stored anywhere. Used for identity. Sender sign and ecnrypt a message with private key and obtain a signature. Recipient validate the signature and decrypt content with sender public key. Similar to RSA without signature. [Reference](https://libsodium.gitbook.io/doc/public-key_cryptography/public-key_signatures)
+- **Box keys:** Random on every negotation. Used for encrypted communications. Optional to store in local storage for persistent. Sender encrypt message with its private key, recipient's public key and a nonce. Recipient decrypt message with sender's public key, it's own private key and the nonce used by sender. More secure than RSA. [Reference](https://libsodium.gitbook.io/doc/public-key_cryptography/authenticated_encryption)
 - **Token:** Random on every negotation. Used for sessions to retrieve private
 static files only.
 
