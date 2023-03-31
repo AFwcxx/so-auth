@@ -19,9 +19,8 @@ Users and permissions are not covered in this demo but can be implemented easily
 
 There are 3 main keypoints:
 
-- **Signing keys:** Deterministic and not stored anywhere. Used for identity.
-- **Box keys:** Random on every negotation. Used for encrypted communications.
-Optional to store in local storage for persistent.
+- **Signing keys:** Deterministic and not stored anywhere. Used for identity. Sender sign and ecnrypt a message with private key and obtain a signature. Recipient validate the signature and decrypt content with sender public key. Similar to RSA without signature.
+- **Box keys:** Random on every negotation. Used for encrypted communications. Optional to store in local storage for persistent. Sender encrypt message with its private key, recipient's public key and a nonce. Recipient decrypt message with sender's public key, it's own private key and the nonce used by sender. More secure than RSA.
 - **Token:** Random on every negotation. Used for sessions to retrieve private
 static files only.
 
@@ -30,12 +29,12 @@ static files only.
 |  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
 | ------------- | ------------- |------------- |
 |  |  | Generate Signing key pairs and share the Signing public key to all clients. |
-| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, Signing public key.  |  |
+| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, Signing public key and Box public key (if decrypt with the client's Signing public key).  |  |
 |  |  | Receives the negotation request, validate the signature and Signing public key.<br />If valid, generate it's own Box key pairs and random Token.  <br />Create a message that consists of it's own Box public key and random Token.<br />Sign the message with own Signing private key and reply to the client with only the signature. |
-| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server Box public key locally | Has the server signature.  <br /><br />Has the client Token.  |  |
+| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server Box public key locally | Has the server signature, server's Box public key (if decrypt with server's Signing public key).  <br /><br />Has the client Token.  |  |
 | Negotation ends. Communication begins. |
 | Use it's own Box private key and server Box public key to encrypt message.  <br />Send the ciphertext, nonce and Token  |  | Use the Token received to retrieve client Box public key and try decrypt it with it's own Box private key.  |
-| | **In total, it may hold:**<br/><br />The client's Signing public key, signature and Token<br /><br />The server's signature | |
+| | **In total, it may hold:**<br/><br />The client's Signing public key, Box public key, signature, and Token<br /><br />The server's Box pubc key and signature | |
 
 The Man in the Middle:
 
