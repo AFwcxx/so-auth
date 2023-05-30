@@ -3,8 +3,6 @@
     "base": "https://soauth.com",
     "title": "SoAuth",
     "network": {
-      "ipv4": true,
-      "ipv6": false,
       "requestLimit": "100mb"
     }
   },
@@ -12,8 +10,6 @@
     "base": "http://localhost:3000",
     "title": "SoAuth (Dev)",
     "network": {
-      "ipv4": true,
-      "ipv6": false,
       "requestLimit": "100mb"
     }
   }

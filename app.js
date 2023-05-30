@@ -74,20 +74,15 @@ app.use(frontEndList, function(req, res) {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(function (req, res, next) {
-  (async () => {
-    let v4 = '';
-    let v6 = '';
+  req.clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 
-    if (config[env].network.ipv4) {
-      v4 = await publicIp.v4();
-    }
-    if (config[env].network.ipv6) {
-      v6 = await publicIp.v6();
-    }
+  if (req.clientIp.includes(',')) {
+    let split = req.clientIp.split(',');
 
-    req.clientIp = v4 + ' ' + v6;
-    next();
-  })();
+    req.clientIp = split[0].trim();
+  }
+
+  next();
 });
 
 app.use(function(req, res, next) {
