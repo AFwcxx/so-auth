@@ -3,6 +3,25 @@
 const http = require("http");
 const https = require("https");
 
+// https://stackoverflow.com/a/54409977
+class BigDecimal {
+  constructor(value) {
+    let [ints, decis] = String(value).split(".").concat("");
+    decis = decis.padEnd(BigDecimal.decimals, "0");
+    this.bigint = BigInt(ints + decis);
+  }
+  static fromBigInt(bigint) {
+    return Object.assign(Object.create(BigDecimal.prototype), { bigint });
+  }
+  divide(divisor) { // You would need to provide methods for other operations
+    return BigDecimal.fromBigInt(this.bigint * BigInt("1" + "0".repeat(BigDecimal.decimals)) / divisor.bigint);
+  }
+  toString() {
+    const s = this.bigint.toString().padStart(BigDecimal.decimals+1, "0");
+    return s.slice(0, -BigDecimal.decimals) + "." + s.slice(-BigDecimal.decimals);
+  }
+}
+
 // EXPORT --
 exports.isJsonString = isJsonString;
 exports.ucWord = ucWord;
@@ -28,25 +47,6 @@ function ucWord(str) {
   });
 }
 
-function intToStr(num, decimal) {
-  let display = num;
-  let displayed = parseFloat(num / (10 ** decimal).toString());
-
-  if (!displayed.toString().includes('.')) {
-    displayed += '.0';
-  }
-
-  let display_array = displayed.toString().split('.');
-
-  if (display_array.length < 2) {
-    return false;
-  } else {
-    display = display_array[0].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + '.' + display_array[1].padEnd(decimal, '0');
-  }
-
-  return display;
-}
-
 function arithmetic(operation, a, b, decimal) {
   // Replace coma if exists
   let re = new RegExp(',', 'g');
@@ -64,6 +64,29 @@ function arithmetic(operation, a, b, decimal) {
   } else {
     return false;
   }
+}
+
+// Convert integer to decimal string
+function intToStr(num, decimal) {
+  if (typeof num === 'string') {
+    num = num.replace(',', '');
+  } else {
+    num = num.toLocaleString('fullwide', {useGrouping:false});
+  }
+
+  let prepend = '';
+
+  if (num.includes('-')) {
+    prepend = '-';
+    num = num.replace(/-/g, '');
+  }
+
+  BigDecimal.decimals = decimal; // Configuration of the number of decimals you want to have.
+
+  let a = new BigDecimal(num);
+  let b = new BigDecimal("1" + "0".repeat(decimal));
+
+  return prepend + a.divide(b).toString();
 }
 
 function monthDiff(dateFrom, dateTo) {
