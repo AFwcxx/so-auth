@@ -11,9 +11,9 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const helmet = require('helmet');
-const publicIp = require('public-ip');
 const useragent = require('express-useragent');
 const mustacheExpress = require('mustache-express');
+const cors = require('cors');
 
 const soAuth = require('./middlewares/so-auth');
 
@@ -30,6 +30,7 @@ const indexRouter = require('./routes/index');
 
 const app = express();
 
+app.use(cors());
 app.use(helmet({
   contentSecurityPolicy: false
 }));
@@ -83,17 +84,6 @@ app.use(function (req, res, next) {
   }
 
   next();
-});
-
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header('Access-Control-Allow-Methods', "*");
-  res.header("Access-Control-Allow-Headers", "*");
-  if ('OPTIONS' === req.method) {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
 });
 
 const secret = require('./configs/so-auth.json').passphrase;
