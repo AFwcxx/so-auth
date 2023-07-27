@@ -10,6 +10,7 @@ const url  = require('url');
 const fs = require('fs');
 const NodeCache = require( "node-cache" );
 const myCache = new NodeCache();
+const rateLimit = require('express-rate-limit');
 
 var Access = false;
 var User = false;
@@ -437,6 +438,13 @@ module.exports = function (options) {
 
 // ==== ROUTER ====
 
+const soAuthLimiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 1 minutes
+	max: 30, // Limit each IP to 30 requests per `window`
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+router.use('/soauth', soAuthLimiter);
 
 // Handles logout
 router.all('/soauth/logout/:token', function(req, res, next) {
@@ -536,6 +544,14 @@ router.all('*', function(req, res, next) {
     next();
   }
 });
+
+const privateLimiter = rateLimit({
+	windowMs: 1 * 60 * 1000, // 1 minute
+	max: 100, // Limit each IP to 100 requests per `window`
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+router.use('/private', privateLimiter);
 
 // private upload file if exists
 router.use('/private/download/:mediaId', function(req, res, next) {
