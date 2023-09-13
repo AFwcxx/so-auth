@@ -8,48 +8,206 @@
 |____/ \___/_/   \_\__,_|\__|_| |_|
 ```
 
-This is a NodeJS + Express demo server with full privacy and secure communication.
-The demo only cover the authentication aspect.
-Users and permissions are not covered in this demo but can be implemented easily.
+A Sodium based authentication framework.\
+Set it up either as a centralised service that allows single host or multiple hosts management.\
+Where the clients can be either human (browser) or machine (computer).\
+Built with the assumption that there is a man-in-the-middle.\
+Easy. Secure. Private.
+
+## Communication topology
+
+> No issue with multiple layer of proxies.
+
+```js
+          /---> Client Browser(s)
+Host <---X                                       /---> Proxy <---> Client Machine
+          \---> Client Machine, also a Host <---X
+                                                 \---> Client Machine
+```
+
+## Demo
+
+### As host
+```js
+$ npm run host-test
+```
+
+### As human on browser
+```js
+$ npm run browser-test
+```
+
+### As machine
+```js
+$ npm run machine-test
+```
+
+## Usage
+
+### Host example
+```js
+import soauth from '../dist/host/soauth.mjs';
+import express from 'express';
+
+soauth.setup({
+  secret: 'secret',
+  serves: ['test-host-id']
+});
+
+const app = express();
+app.use(express.json());
+
+app.post('/negotiate', async (req, res, next) => {
+  const result = soauth.negotiate(req.body);
+  const fingerprint = req.headers['soauth-fingerprint'];
+  const intention = result.intention;
+
+  if (soauth.check_store_data(soauth.SOAUTH_HUMAN_STOREDATA, result.data)) {
+    if (intention === 'login') {
+      // process login data
+    } else if (intention === 'register') {
+      // process register data
+    }
+  }
+
+  delete result.data;
+  return res.json(result);
+});
+
+app.post('/human', async (req, res, next) => {
+  const token = req.body.token;
+  const data = req.body.data;
+  const { hostId, boxPublicKey } = get_from_human_database(token);
+  const result = soauth.decrypt(data, hostId, boxPublicKey);
+  return res.json(soauth.encrypt('Hello human', hostId, boxPublicKey));
+});
+
+app.post('/machine', async (req, res, next) => {
+  const data = req.body.data;
+  const fingerprint = req.headers['soauth-fingerprint'];
+  const { hostId, publicKey } = get_from_machine_database(fingerprint);
+  const result = soauth.decrypt(data, hostId, publicKey);
+  return res.json(soauth.encrypt('Hello machine', hostId, publicKey));
+});
+```
+
+### Human example (browser)
+```js
+import { webgl } from '../dist/human/webgl.js'
+import soauth from '../dist/human/soauth.js'
+
+const hostSignPublicKey = "94ab003eb7cb7777c41b34a987863a47c5898516ba2a0e8df835adbc23fdd826";
+const hostId = "test-host-id";
+const hostEndpoint = "http://127.0.0.1:3000";
+
+await soauth.setup({
+  hostId, hostSignPublicKey, hostEndpoint, webgl,
+  expired_callback: function () {
+    window.location.reload();
+  }
+});
+
+const credential = {
+  username: "malique";
+  password: "786";
+  bio: "https://open.spotify.com/artist/4ZsSCvTFG2Krx3AyQ6vHzk?si=B0YV5WH3SMSl-tcGgcaY7w";
+};
+
+const meta = {
+  email: "optional@email.com"
+};
+
+const response = await soauth.negotiate('login', credential, '/negotiate', meta });
+if (response) {
+  const hostReply = await soauth.exchange("Hello host", '/human');
+}
+```
+
+### Machine example
+```js
+import soauth from '../dist/machine/soauth.mjs';
+import http from 'http';
+
+soauth.setup({
+  secret: 'secret',
+  hostId: 'test-host-id',
+  hostPublicKey: 'c6133c4ccba8a0643af197334ca01597879363d6371f221bcba3e0a970958a6e'
+});
+
+const encrypted = soauth.encrypt('Hello host');
+const postData = JSON.stringify(encrypted);
+
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/machine',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(postData),
+    'SoAuth-Fingerprint': 'test-machine'
+  },
+};
+
+const req = http.request(options, (res) => {
+  res.setEncoding('utf8');
+  let data = "";
+  res.on('data', (chunk) => { data += chunk });
+  res.on('end', () => {
+    data = JSON.parse(data);
+    const decrypted = soauth.decrypt(data);
+  });
+});
+req.write(postData);
+req.end();
+```
+
+## Build your own
+
+### SoAuth components
+
+- [Host](https://github.com/AFwcxx/so-auth/tree/main/dist/host)
+- [Human](https://github.com/AFwcxx/so-auth/tree/main/dist/human)
+- [Machine](https://github.com/AFwcxx/so-auth/tree/main/dist/machine)
+
 
 ## Concept
 
-1. The clients know the public identity of the server.
-2. The server should never store any client private credentials.
+1. The clients know the public identity of the host.
+2. The host should never store any client private credentials.
 
-There are 3 main keypoints:
+Main keypoints:
 
-- **Signing keys:** Deterministic and not stored anywhere. Used for identity. Sender sign and ecnrypt a message with private key and obtain a signature. Recipient validate the signature and decrypt its content with sender public key. Similar to RSA. [Reference](https://libsodium.gitbook.io/doc/public-key_cryptography/public-key_signatures).
-- **Box keys:** Random on every negotation. Used for encrypted communications. Optional to store in local storage for persistent. Sender encrypt message with its private key, recipient's public key and a nonce. Recipient decrypt message with sender's public key, it's own private key and the nonce used by sender. More secure than RSA. [Reference](https://libsodium.gitbook.io/doc/public-key_cryptography/authenticated_encryption).
-- **Token:** Random on every negotation. Used for sessions to retrieve private
-static files only.
+- **Signing keys:** Deterministic. Used for human identity. Password not required, as long as the human memory is intact.
+- **Box keys:** Random on every negotation. Used for encrypted communications.
+- **Token:** Random on every negotation. Used for sessions to retrieve private readonly data.
+- **Fingerprint:** Unique hash of the client resource information.
 
 ## Flow
 
-|  CLIENT   | MAN IN THE MIDDLE |   SERVER  |
+|  CLIENT   | MAN IN THE MIDDLE |   HOST  |
 | ------------- | ------------- |------------- |
-|  |  | Generate Signing key pairs and share the Signing public key to all clients. |
-| Has the server Signing public key. <br />Generate deterministic seed from inputs for Signing key pairs. <br />Generate random seed for Box key pairs and store in local storage.<br />Create a message that consists of it's own Box public key.<br />Sign the message with it's own Signing private key and send the signature and Signing public key as negotiation. | Has the client signature, Signing public key and Box public key (if decrypt with the client's Signing public key).  |  |
-|  |  | Receives the negotation request, validate the signature and Signing public key.<br />If valid, generate it's own Box key pairs and random Token.  <br />Create a message that consists of it's own Box public key and random Token.<br />Sign the message with own Signing private key and reply to the client with only the signature. |
-| Receives the signature, use the server public key that it already has to validate whether the signature is really from the server. If valid, store the server Box public key locally | Has the server signature, server's Box public key (if decrypt with server's Signing public key).  <br /><br />Has the client Token.  |  |
+|  |  | - Generate Signing key pairs and share the Signing public key to respective clients. |
+| - Has the host Signing public key. <br />- Generate Signing key pairs and Box key pairs.<br />- Create a message that consists of the Box public key.<br />- Sign the message with Signing private key.<br />- Send the signature and Signing public key as negotiation. | Has the client signature, Signing public key and Box public key (if decrypt with the client's Signing public key).  |  |
+|  |  | - Receives the negotation request, validate the signature and Signing public key.<br />- If valid, generate Box key pairs and Token.<br />- Create a message that consists of the Box public key and Token.<br />- Sign the message with Signing private key and respond to the client with only the signature. |
+| Receives the signature, use the host Signing public key to validate the signature and keep the host Box public key. | - Has the host signature, host's Box public key (if decrypt with host's Signing public key).<br />- Has the client Token.  |  |
 | Negotation ends. Communication begins. |
-| Use it's own Box private key and server Box public key to encrypt message.  <br />Send the ciphertext, nonce and Token  |  | Use the Token received to retrieve client Box public key and try decrypt it with it's own Box private key.  |
-| | **In total, it may hold:**<br/><br />The client's Signing public key, Box public key, signature, and Token<br /><br />The server's Box pubc key and signature | |
+| - Use Box private key and host's Box public key to encrypt message.<br />- Send the ciphertext, nonce and Token.|  | Use the Token session to obtain client's Box public key and decrypt it with host own Box private key.|
+| | **In total, it may hold:**<br/><br />- The client's Signing public key, Box public key, signature, and Token<br />- The host's Box public key and signature | |
 
 The Man in the Middle:
 
 - Replaying the client signing process with it's own signature to provide it's own
 Box public key will only become a new identity since it cannot provide the
 client's Signing public key (identity) and have a valid signature.
-- Replaying the signing process as the server will only generate invalid
+- Replaying the signing process as the host will only generate invalid
 signature when the client validates it.
 - Passing the client's Token with it's own ciphertext and nonce
-(using it's own Box key pairs) in the communication will only point the server
+(using it's own Box key pairs) in the communication will only point the host
 to retrieve the invalid or non-exist public key and will not able to decrypt the ciphertext.
-- Since the Token lifetime is until the next signing process, Tokens
-should NEVER be used to retrieve sensitive information.
-Only static files such as javascript, json, stylesheet or html in private scope. 
-Useful to isolate contents that should only be retrievable post authenticated.
+- Since the Token lifetime remains alive until the next negotation process, Tokens
+should NEVER be used to retrieve sensitive information. Useful for static files such as javascript, json, stylesheet or html in private scope. 
+Useful to isolate contents that should only be retrievable after authenticated.
 
 About the Persistent mode:
 
@@ -58,371 +216,36 @@ Never the signing key pairs.
 - Box key pairs lifetime is until the next signing process or
 when the local storage is cleared.
 - If the local storage is compromised or Box key pairs is copied,
-logout or re-negotiate.
+destroy the client Box public key or re-negotiate.
 - <b>DO NOT</b> store Signing private key as that is the client identity.
 
 ## Specifications
 
-### Demo File structure
-
-This demo uses Bootstrap, Vue and MongoDB to complete the tech stack.
-You may use anything you wish but this demo is sufficient by itself to be
-customized and add your own features.
-
-The files and folders in the structure below is an example but SoAuth is expecting
-the `private` folder, used specifically to allow private static files
-accessible only by token holders.
+### File structure
 
 ```
-├── bin
-| └── www : NodeJS executable file
+├── dist
+| └── host : Source file to use as host
+| └── human : Source file to use as client human on browser
+| └── machine : Source file to use as client machine on computer
 |
-├── configs
-| └── mongodb.json : MongoDB server and database config file
-| └── so-auth.json : SoAuth Server-to-Server config file
+├── host-test : Test as host
 |
-├── middlewares
-| └── so-auth.js : SoAuth middleware file
+├── browser-test : Test as client human on browser
 |
-├── models
-| └── access.js : Handler that manage SoAuth clients' storage data and GridFS upload. MongoDB in this case.
-|
-├── modules
-| └── mongodb.js : MongoDB module
-| └── so-auth.js : SoAuth Server-to-Server module
-| └── tool.js : Misc module (JSON string checker and http/https)
-|
-├── private
-| └── * : Everything that resides here requires Token to access.
-|
-├── public
-| └── * : Everything that resides here are for everyone to access
-|
-├── routes
-| └── * : Everything that resides here handle routes
-|
-├── views
-| └── * : Everything that resides here handle views.  This demo uses Mustache as template engine.
-|
-├── .gitignore
-├── README.md
-├── app.js : Express application file where middleware resides.
-└── package.json 
+└── machine-test : Test as client machine on a computer
 ```
 
-### Using SoAuth middleware
+### WebGL Fingerprint
 
-```js
-// app.js
-
-var SoAuth = require('./middlewares/so-auth');
-app.use(SoAuth({
-  secret: 'super-secure-secret',
-  handler: require('./models/access'),
-  servingHostIds: ['hostId_1', 'hostId_2']
-}));
-
-/*
-handler: 
-- An object that manage SoAuth clients data, it can also be used as a "bridge"
-or callbacks to other objects or functions.
-- This can be anything really for as long as the requirement is fulfilled, refer
-next section.
-
-servingHostIds:
-- Allow multiple platform to connect using the same Signing key pairs but
-dedicated Box key pairs within the same database.
-- Useful to allow the same user credential to login but with unique encryption
-
-Note: When the server starts, it will display the signing public key in the console.
-*/
-```
-
-#### Handler requirements
-
-The handler allows you to scale SoAuth to whatever you wish,
-beside storing the client's metadata and public keys.
-
-Example of additional useful features to have:
-
-- Creating an OTP procedure
-- Detect if the client is accessed on different device by using agent information
-- Create reference between your user model and the `signPublicKey`
-
-```js
-// The meta parameter below is where you can use information sent from the client such as registration data - firstname, lastname, email, username and etc.  Do note that this does not make your database private anymore unless it is encyrpted or hashed from the client side.
-// By default meta will be an empty object
-
-Promise bool function create(Object params, Router req, Router, res, Router next)
-  String params.boxPublicKey
-  String params.signPublicKey
-  String params.token
-  String params.fingerprint
-  Object params.meta
-
-Promise bool function update(Object params, Router req, Router, res, Router next)
-  String params.boxPublicKey
-  String params.token
-  String params.fingerprint
-  Object params.meta
-
-Promise Object function findOne(Object params, Router req, Router, res, Router next)
-  Object params.message // only in negotation phase
-  String params.signPublicKey
-  or
-  String params.token
-
-[Optional] Express.Router Content function mediaFetchController(Object req,
-Object res, Object next)
-// req, res and next is the Express middleware/router variables. This function does not return anything, but pipe the output of the GridFS chunks to the res object
-```
-
-### Using SoAuth browser
-
-```html
-<script src="/javascripts/so-auth.js"></script>
-<script>
-var SoAuth = new SoAuth({
-  hostId: 'hostId_1',
-  hostSignPublicKey: 'server-signing-public-key',
-  endpoint: 'http://localhost:3000/',
-  enableFingerprint: true // Optional - Use WebGL
-});
-</script>
-
-// This is how to retrieve private file using token
-<link href="/private/stylesheets/verified.css?soauth={{token}}" rel="stylesheet">
-```
-
-#### WebGL Fingerprint
-
-If you noticed, the handler and browser section above mentioned fingerprint.
 The fingerprint is a hash of the client device user-agent and client device
 graphical capabilities. User-agent as a sole unique device identifier is
 insufficient as it only has the CPU make model, browser type, and version.
 However, different machines would not have similar graphical rendering
 criteria, and using this information helps generate even more unique device id.
 
-### Signing example
+[WebGL Repository](https://github.com/AFwcxx/webgl-detect)
 
-```js
-// Client:
-
-// The credential can be anything, just remember that it is used to create a deterministic signing key
-// Changing it's structure, format or data will create different key pairs
-// So you'll have to think ahead for your use-case
-
-let credential = {
-  email: 'jondoe@email.com',
-  password: 'super-secure-password'
-};
-
-// Optional 
-// - Only if you require to handle or store user details for your project
-// - This meta data is captured in your own handler file mentioned in the
-previous section
-
-let meta = {
-  email: 'jondoe@email.com',
-  firstname: 'Jon',
-  lastname: 'Doe'
-};
-
-SoAuth.negotiate(credential, 'login', meta).then(response => {
-  if (response && response.token !== undefined) {
-    SoAuth.save();
-    window.location.replace("?soauth=" + response.token);
-  } else {
-    alert('Invalid login!');
-  }
-});
-
-// Server:
-// Nothing needs to be done on the NodeJS side.
-// Middleware is handling the Signing part automatically
-```
-
-### Communication example
-
-```js
-// Client:
-
-SoAuth.load().then(good => {
-  if (good === false) {
-    window.location.replace("/");
-  }
-});
-
-// If the exchange is use multiple times in parallel, it might conflict on the current stored object parameters.
-// Use `clone` to clone the SoAuth object.
-
-SoAuth.clone().exchange('How many cups of sugar does it takes to get to the
-moon?', '/secret').then(response => {
-  if (response) {
-    alert('Server said: ' + response);
-  } else {
-    alert('Communication compromised!');
-    location.reload();
-  }
-});
-
-// Server:
-// The decryption is done automatically and can be accessed via res.locals.decrypted
-// res.locals.SoAuth, which is the SoAuth object is also available
-throughout the request cycle. This is used for encrypting data.
-
-app.post("/secret", function(req, res, next) {
-  if (
-    res.locals.decrypted !== undefined 
-    && res.locals.SoAuth !== undefined
-  ) {
-    res.locals.SoAuth.encrypt(`Your question is: ${res.locals.decrypted}\nMy answer is: 3 and a half.`).then(encrypted => {
-      res.json(encrypted);
-    });
-  } else {
-    next();
-  }
-});
-```
-
-### Server-to-Server example
-
-```js
-// Generating a server public key box
-
-const _SoAuth = require('/path/to/module/so-auth').SoAuth;
-
-let SoAuth = new _SoAuth('super-secret-passphrase');
-
-SoAuth.setup().then(() => {
-  let boxPublicKey = SoAuth.sodium.to_hex(SoAuth.boxKeypair.publicKey);
-  console.log('SoAuth S2S Box Public Key: ' + boxPublicKey)
-});
-
-// When the server starts, it will display the box public key in the console.
-```
-
-```js
-// Communication topology
-
-              /---> Server A
-Server C <---X
-              \---> Server B
-
-```
-
-```js
-// Server A has the public key for Server C
-
-let config = {
-  "passphrase": "i-am-server-a",
-  "cliqueBoxPublicKey": {
-    "server-c": "soauth-public-key-box-server-c",
-  }
-}
-
-// Send encrypted data
-
-const _SoAuth = require('/path/to/module/so-auth').SoAuth;
-
-let SoAuth = new _SoAuth(config.passphrase);
-
-SoAuth.setup().then(() => {
-  SoAuth.cliqueBoxPublicKey = SoAuth.sodium.from_hex(config.cliqueBoxPublicKey['server-c']);
-
-  SoAuth.encrypt({ message: 'Message from Server A' }).then(encrypted => {
-    // refer tool in so-auth/modules/tool.js
-    tool.https(endpoint, {
-      data: encrypted,
-      name: 'server-a'
-    }).then(result => {
-      if (result.ciphertext) {
-        SoAuth.decrypt(result).then(decrypted => {
-          console.log(decrypted);
-        });
-      }
-    });
-  });
-});
-```
-
-```js
-// Server B has the public key for Server C
-
-let config = {
-  "passphrase": "i-am-server-b",
-  "cliqueBoxPublicKey": {
-    "server-c": "soauth-public-key-box-server-c",
-  }
-}
-
-
-// Send encrypted data
-
-const _SoAuth = require('/path/to/module/so-auth').SoAuth;
-
-let SoAuth = new _SoAuth(config.passphrase);
-
-SoAuth.setup().then(() => {
-  SoAuth.cliqueBoxPublicKey = SoAuth.sodium.from_hex(config.cliqueBoxPublicKey['server-c']);
-
-  SoAuth.encrypt({ message: 'Message from Server B' }).then(encrypted => {
-    // refer tool in so-auth/modules/tool.js
-    tool.https(endpoint, {
-      data: encrypted,
-      name: 'server-b'
-    }).then(result => {
-      if (result.ciphertext) {
-        SoAuth.decrypt(result).then(decrypted => {
-          console.log(decrypted);
-        });
-      }
-    });
-  });
-});
-```
-
-```js
-// Server C has the public key for Server A and B
-
-let config = {
-  "passphrase": "i-am-server-c",
-  "cliqueBoxPublicKey": {
-    "server-a": "soauth-public-key-box-server-a",
-    "server-b": "soauth-public-key-box-server-b"
-  }
-}
-
-// Response to server accordingly
-
-const _SoAuth = require('/path/to/module/so-auth').SoAuth;
-
-let SoAuth = new _SoAuth(config.passphrase);
-
-SoAuth.setup().then(() => {
-  // req.body.name is the body request data in Express
-  SoAuth.cliqueBoxPublicKey = SoAuth.sodium.from_hex(config.cliqueBoxPublicKey[req.body.name]);
-
-  SoAuth.decrypt(req.body.data).then(decrypted => {
-    if (typeof decrypted.message === 'string') {
-      decrypted.message = decrypted.message.replace('Message from ', '');
-
-      // Send encrypted data
-      SoAuth.encrypt({ message: `Hello ${decrypted.message}, message received..` }).then(encypted => {
-        res.send(encypted);
-      });
-    }
-  });
-});
-```
-
-## Build your own
-
-### SoAuth components
-
-- [Express Middleware](https://github.com/AFwcxx/so-auth/blob/master/middlewares/so-auth.js)
-- [Browser](https://github.com/AFwcxx/so-auth/blob/master/public/javascripts/so-auth.js)
-- [Server-to-Server](https://github.com/AFwcxx/so-auth/blob/master/modules/so-auth.js)
 
 ### Dependencies
 
