@@ -1,4 +1,4 @@
-# Sodium base authentication
+# Sodium based authentication
 
 ```sh
  ____          _         _   _     
