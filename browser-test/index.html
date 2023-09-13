@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <body>
+
+    <form onsubmit="return false">
+      <div>
+        <label>Username</label>
+        <input type="text" id="username">
+      </div>
+
+      <div>
+        <label>Password</label>
+        <input type="password" id="password">
+      </div>
+
+      <br>
+
+      <button onclick="register()">Register</button>
+      <button onclick="login()">Login</button>
+      <button onclick="reload()">Reload</button>
+
+      <br>
+      <br>
+
+      <textarea rows="3" id="message" disabled="true" class="toggle-disable"></textarea>
+      <br>
+      <button onclick="send()" disabled="true" class="toggle-disable">Send</button>
+
+      <br>
+      <p>Server received:</p>
+      <textarea rows="3" id="server" readonly></textarea>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"></script>
+    <script src="/dist/human/sodium.js"></script>
+    <script src="index.js" type="module"></script>
+  </body>
+</html>

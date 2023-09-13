@@ -1,9 +1,0 @@
-{
-  "hostId": "self",
-  "servingHostIds": ["self"],
-  "passphrase": "super-secret",
-  "cliqueBoxPublicKey": {
-    "self": "f07870a43c4952342029872f377542ece5ef4b68b8115d8feec016ece8977113"
-  },
-  "frontendReplace": "31a986bde8d64d8167df151179641eb5bff547bbb018271f119e73f68d1cfb0b"
-}
