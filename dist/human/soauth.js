@@ -75,7 +75,7 @@ async function prepare_keypairs (credential) {
   let seed = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_generichash_BYTES_MAX, seedString + SOAUTH.hostSignPublicKey);
   let signSeed = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_sign_SEEDBYTES, seed);
 
-  SOAUTH.boxSeed = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_sign_SEEDBYTES, seed + SOAUTH.sodium.randombytes_random());
+  SOAUTH.boxSeed = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_box_SEEDBYTES, seed + SOAUTH.sodium.randombytes_random());
 
   SOAUTH.signKeypair = await SOAUTH.sodium.crypto_sign_seed_keypair(signSeed);
   SOAUTH.boxKeypair = await SOAUTH.sodium.crypto_box_seed_keypair(SOAUTH.boxSeed);
