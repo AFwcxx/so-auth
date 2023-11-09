@@ -31,6 +31,8 @@ function serialize_message (message) {
     message = JSON.stringify(message);
   } else if (typeof message === 'string') {
     // OK
+  } else if (typeof message === 'number') {
+    message = "" + message;
   } else {
     throw new Error("Invalid message format to serialize");
   }
