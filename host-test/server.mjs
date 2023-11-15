@@ -90,97 +90,109 @@ for (let i = 0; i < machineData.length; i++) {
 // ==
 
 app.post('/negotiate', async (req, res, next) => {
-  const result = soauth.negotiate(req.body);
-  let pass = false;
+  try {
+    const result = soauth.negotiate(req.body);
+    let pass = false;
 
-  if (
-    typeof result === 'object'
-    && typeof result.data === 'object'
-  ) {
-    result.data.fingerprint = req.headers['soauth-fingerprint'];
+    if (
+      typeof result === 'object'
+      && typeof result.data === 'object'
+    ) {
+      result.data.fingerprint = req.headers['soauth-fingerprint'];
 
-    if (soauth.check_store_data(soauth.SOAUTH_HUMAN_STOREDATA, result.data)) {
-      let foundHumanDataIndex = humanData.findIndex(item => {
-        return item.signPublicKey === result.data.signPublicKey && item.hostId === result.data.hostId;
-      });
+      if (soauth.check_store_data(soauth.SOAUTH_HUMAN_STOREDATA, result.data)) {
+        let foundHumanDataIndex = humanData.findIndex(item => {
+          return item.signPublicKey === result.data.signPublicKey && item.hostId === result.data.hostId;
+        });
 
-      result.data.ts = new Date();
+        result.data.ts = new Date();
 
-      if (result.data.intention === 'login' && foundHumanDataIndex !== -1) {
-        humanData[foundHumanDataIndex] = result.data;
-        pass = true;
-      } else if (result.data.intention === 'register' && foundHumanDataIndex === -1) {
-        humanData.push(result.data);
-        pass = true;
+        if (result.data.intention === 'login' && foundHumanDataIndex !== -1) {
+          humanData[foundHumanDataIndex] = result.data;
+          pass = true;
+        } else if (result.data.intention === 'register' && foundHumanDataIndex === -1) {
+          humanData.push(result.data);
+          pass = true;
+        }
       }
     }
+
+    if (!pass) {
+      result.success = false;
+      result.message = 'Unable to ' + result.data.intention;
+      delete result.signature;
+    }
+
+    console.log('Human Data:');
+    console.dir(humanData, { depth:null });
+
+    delete result.data;
+    return res.json(result);
+  } catch (err) {
+    return next(err);
   }
-
-  if (!pass) {
-    result.success = false;
-    result.message = 'Unable to ' + result.data.intention;
-    delete result.signature;
-  }
-
-  console.log('Human Data:');
-  console.dir(humanData, { depth:null });
-
-  delete result.data;
-  return res.json(result);
 });
 
 app.post('/message', async (req, res, next) => {
-  if (!req.body.token) {
-    return res.json({
-      success: false,
-      message: 'Insufficient parameter received.'
-    });
+  try {
+    if (!req.body.token) {
+      return res.json({
+        success: false,
+        message: 'Insufficient parameter received.'
+      });
+    }
+
+    let foundHumanDataIndex = humanData.findIndex(item => { return item.token === req.body.token });
+
+    if (foundHumanDataIndex === -1) {
+      return res.json({
+        success: false,
+        message: 'Invalid request.'
+      });
+    }
+
+    const hostId = humanData[foundHumanDataIndex].hostId;
+    const boxPublicKey = humanData[foundHumanDataIndex].boxPublicKey;
+    const result = soauth.decrypt(req.body, hostId, boxPublicKey);
+
+    console.log('result', result);
+
+    return res.json(soauth.encrypt(result, hostId, boxPublicKey));
+  } catch (err) {
+    return next(err);
   }
-
-  let foundHumanDataIndex = humanData.findIndex(item => { return item.token === req.body.token });
-
-  if (foundHumanDataIndex === -1) {
-    return res.json({
-      success: false,
-      message: 'Invalid request.'
-    });
-  }
-
-  const hostId = humanData[foundHumanDataIndex].hostId;
-  const boxPublicKey = humanData[foundHumanDataIndex].boxPublicKey;
-  const result = soauth.decrypt(req.body, hostId, boxPublicKey);
-
-  console.log('result', result);
-
-  return res.json(soauth.encrypt(result, hostId, boxPublicKey));
 });
 
 app.post('/machine', async (req, res, next) => {
-  const fingerprint = req.headers['soauth-fingerprint'];
+  try {
+    const fingerprint = req.headers['soauth-fingerprint'];
 
-  if (!fingerprint) {
-    return res.json({
-      success: false,
-      message: 'Insufficient parameter received.'
-    });
+    if (!fingerprint) {
+      return res.json({
+        success: false,
+        message: 'Insufficient parameter received.'
+      });
+    }
+
+    let foundMachineDataIndex = machineData.findIndex(item => { return item.fingerprint === fingerprint });
+
+    if (foundMachineDataIndex === -1) {
+      return res.json({
+        success: false,
+        message: 'Invalid request.'
+      });
+    }
+
+    const hostId = machineData[foundMachineDataIndex].hostId;
+    const publicKey = machineData[foundMachineDataIndex].publicKey;
+    const result = soauth.decrypt(req.body, hostId, publicKey);
+
+    console.log('result', result);
+
+    return res.json(soauth.encrypt(result, hostId, publicKey));
+  } catch (err) {
+    return next(err);
   }
-
-  let foundMachineDataIndex = machineData.findIndex(item => { return item.fingerprint === fingerprint });
-
-  if (foundMachineDataIndex === -1) {
-    return res.json({
-      success: false,
-      message: 'Invalid request.'
-    });
-  }
-
-  const hostId = machineData[foundMachineDataIndex].hostId;
-  const publicKey = machineData[foundMachineDataIndex].publicKey;
-  const result = soauth.decrypt(req.body, hostId, publicKey);
-
-  console.log('result', result);
-
-  return res.json(soauth.encrypt(result, hostId, publicKey));
 });
 
 // catch 404 and forward to error handler
