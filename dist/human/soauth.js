@@ -170,7 +170,6 @@ export const negotiate = async function (intention, credential, pathname, meta =
   }
 
   const message = serialize_message({
-    hostId: SOAUTH.hostId,
     intention,
     meta,
     boxPublicKey: SOAUTH.sodium.to_hex(SOAUTH.boxKeypair.publicKey),
@@ -182,9 +181,17 @@ export const negotiate = async function (intention, credential, pathname, meta =
   const signatureHex = SOAUTH.sodium.to_hex(signature);
   const signPublicKeyHex = SOAUTH.sodium.to_hex(SOAUTH.signKeypair.publicKey);
 
-  const response = await send_message({
+  // seal this
+  const signatureMessage = serialize_message({
     signature: signatureHex,
     signPublicKey: signPublicKeyHex
+  });
+
+  const sealed = SOAUTH.sodium.crypto_box_seal(signatureMessage, SOAUTH.sodium.from_hex(SOAUTH.hostSignPublicKey));
+
+  const response = await send_message({
+    sealed: SOAUTH.sodium.to_hex(sealed),
+    hostId: SOAUTH.hostId,
   }, pathname);
 
   // validate the response
@@ -192,14 +199,14 @@ export const negotiate = async function (intention, credential, pathname, meta =
     throw new Error("Invalid negotiation response from host.");
   }
 
-  if (!response.signature) {
+  if (!response.sealed) {
     return false;
   }
 
-  const extracted = await SOAUTH.sodium.crypto_sign_open(SOAUTH.sodium.from_hex(response.signature), SOAUTH.sodium.from_hex(SOAUTH.hostSignPublicKey));
+  const extracted = await SOAUTH.sodium.crypto_box_seal_open(SOAUTH.sodium.from_hex(response.sealed), SOAUTH.boxKeypair.publicKey, SOAUTH.boxKeypair.privateKey);
 
   if (!extracted) {
-    throw new Error("Unable to extract host's signature.");
+    throw new Error("Unable to extract host's seal.");
   }
 
   let data;
@@ -207,7 +214,7 @@ export const negotiate = async function (intention, credential, pathname, meta =
   try {
     data = JSON.parse(SOAUTH.sodium.to_string(extracted));
   } catch (err) {
-    throw new Error("Invalid extracted host signature format.");
+    throw new Error("Invalid extracted host seal format.");
   }
 
   if (

@@ -14,9 +14,9 @@ const SOAUTH = {
 
 function generate_sign(hostId) {
   const seed = SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_generichash_BYTES_MAX, SOAUTH.secret + hostId);
-  const signSeed = SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_sign_SEEDBYTES, seed);
+  const signSeed = SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_box_SEEDBYTES, seed);
 
-  return SOAUTH.sodium.crypto_sign_seed_keypair(signSeed);
+  return SOAUTH.sodium.crypto_box_seed_keypair(signSeed);
 }
 
 function generate_auth(hostId, boxPublicKey) {
@@ -69,17 +69,38 @@ export const negotiate = function (request) {
   const response = {
     success: false,
     message: "Invalid request",
-    signature: null,
+    sealed: null,
     data: null
   };
 
   try {
     if (
+      typeof request !== "object"
+      || typeof request.sealed !== "string"
+      || typeof request.hostId !== 'string' 
+    ) {
+      throw new Error("Invalid request format.");
+    }
+
+    const hostId = request.hostId;
+
+    if (!SOAUTH.serves.includes(hostId)) {
+      throw new Error("Invalid host id.");
+    }
+
+    const sign = generate_sign(hostId);
+
+    // open the seal
+    const openedSeal = SOAUTH.sodium.crypto_box_seal_open(SOAUTH.sodium.from_hex(request.sealed), sign.publicKey, sign.privateKey);
+
+    request = JSON.parse(SOAUTH.sodium.to_string(openedSeal));
+
+    if (
       typeof request !== 'object'
       || typeof request.signature !== 'string'
       || typeof request.signPublicKey !== 'string'
     ) {
-      throw new Error('Invalid request format.');
+      throw new Error('Invalid negotiation format.');
     }
 
     request.signature = SOAUTH.sodium.from_hex(request.signature);
@@ -95,7 +116,6 @@ export const negotiate = function (request) {
 
     if (
       typeof message !== 'object'
-      || typeof message.hostId !== 'string' 
       || typeof message.intention !== 'string' 
       || typeof message.boxPublicKey !== 'string'
       || typeof message.serverSignPublicKey !== 'string' 
@@ -107,17 +127,11 @@ export const negotiate = function (request) {
       throw new Error("Invalid intention.");
     }
 
-    if (!SOAUTH.serves.includes(message.hostId)) {
-      throw new Error("Invalid host id.");
-    }
-
-    const sign = generate_sign(message.hostId);
-
     if (message.serverSignPublicKey !== SOAUTH.sodium.to_hex(sign.publicKey)) {
       throw new Error("Invalid host signature requested.");
     }
 
-    const auth = generate_auth(message.hostId, message.boxPublicKey);
+    const auth = generate_auth(hostId, message.boxPublicKey);
 
     const serialized = serialize_message({
       intention: message.intention,
@@ -125,17 +139,17 @@ export const negotiate = function (request) {
       token: SOAUTH.sodium.to_hex(auth.token)
     });
 
-    const signature = SOAUTH.sodium.crypto_sign(SOAUTH.sodium.from_string(serialized), sign.privateKey);
+    const sealed = SOAUTH.sodium.crypto_box_seal(serialized, SOAUTH.sodium.from_hex(message.boxPublicKey));
 
     response.data = {
       intention: message.intention,
-      hostId: message.hostId,
+      hostId: hostId,
       boxPublicKey: message.boxPublicKey,
       signPublicKey: SOAUTH.sodium.to_hex(request.signPublicKey),
       meta: message.meta,
       token: SOAUTH.sodium.to_hex(auth.token)
     };
-    response.signature = SOAUTH.sodium.to_hex(signature);
+    response.sealed = SOAUTH.sodium.to_hex(sealed);
   } catch (err) {
     response.message = err.message || err;
     return response;

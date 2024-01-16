@@ -3,7 +3,7 @@
 import { webgl } from '../dist/human/webgl.js'
 import soauth from '../dist/human/soauth.js'
 
-const hostSignPublicKey = "94ab003eb7cb7777c41b34a987863a47c5898516ba2a0e8df835adbc23fdd826";
+const hostSignPublicKey = "02a131f6c11648f43757163d71622ac524e303e2e68c0e5bad4eaec07437847c";
 const hostId = "test-host-id";
 const hostEndpoint = "http://127.0.0.1:3000";
 

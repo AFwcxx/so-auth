@@ -91,12 +91,22 @@ for (let i = 0; i < machineData.length; i++) {
 
 app.post('/negotiate', async (req, res, next) => {
   try {
+    if (!req.headers['soauth-fingerprint']) {
+      throw new Error("Expecting SoAuth fingerprint header.");
+    }
+
     const result = soauth.negotiate(req.body);
+
+    if (!result || !result.success) {
+      throw new Error(result.message);
+    }
+
     let pass = false;
 
     if (
       typeof result === 'object'
       && typeof result.data === 'object'
+      && result.data
     ) {
       result.data.fingerprint = req.headers['soauth-fingerprint'];
 
@@ -120,13 +130,15 @@ app.post('/negotiate', async (req, res, next) => {
     if (!pass) {
       result.success = false;
       result.message = 'Unable to ' + result.data.intention;
-      delete result.signature;
+      delete result.sealed;
     }
 
     console.log('Human Data:');
     console.dir(humanData, { depth:null });
 
+    // the data is not necessary to return since we are using it for db side.
     delete result.data;
+
     return res.json(result);
   } catch (err) {
     return next(err);
@@ -201,6 +213,8 @@ app.use(function(req, res, next) {
 });
 
 app.use(function(err, req, res, next) {
+  console.log("Error", err);
+
   res.json({
     success: false,
     message: err.message
