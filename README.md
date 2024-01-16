@@ -188,7 +188,7 @@ Main keypoints:
 |  CLIENT   | MAN IN THE MIDDLE |   HOST  |
 | ------------- | ------------- |------------- |
 |  |  | - Generate Signing key pairs and share the Signing public key to respective clients. |
-| - Has the host Signing public key. <br />- Generate Signing key pairs and Box key pairs.<br />- Create a message that consists of the Box public key.<br />- Sign the message with Signing private key.<br/ >-Seal the message <br />- Send the signature and Signing public key as negotiation. | Has nothing useful here. |  |
+| - Has the host Signing public key. <br />- Generate Signing key pairs and Box key pairs.<br />- Create a message that consists of the Box public key.<br />- Sign the message with Signing private key.<br />-Seal the message <br />- Send the signature and Signing public key as negotiation. | Has nothing useful here. |  |
 |  |  | - Receives the negotation request, unseal and validate the signature and Signing public key.<br />- If valid, generate Box key pairs and Token.<br />- Create a message that consists of the Box public key and Token.<br />- Seal the message with client Box private key and respond to the client with only the seal. |
 | Receives the negotiation respond, unseal and keep the host Box public key. | Has nothing useful here.  |  |
 | Negotation ends. Communication begins. |
