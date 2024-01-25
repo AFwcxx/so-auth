@@ -286,7 +286,13 @@ export const exchange = async function (message, pathname) {
   }
 }
 
-export const save = function (manual = false) {
+const keygen = async function (secret) {
+  const nonce = SOAUTH.sodium.randombytes_buf(SOAUTH.sodium.crypto_box_NONCEBYTES);
+  const key = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_secretbox_KEYBYTES, secret);
+  return { key, nonce };
+}
+
+export const save = async function (secret, manual = false) {
   if (!is_local_storage_available()) {
     manual = true;
   }
@@ -308,14 +314,22 @@ export const save = function (manual = false) {
     store.boxSeed = SOAUTH.sodium.to_hex(SOAUTH.boxSeed);
   }
 
+  const message = JSON.stringify(store);
+  const { nonce, key } = await keygen(secret);
+
+  const ciphertext = SOAUTH.sodium.crypto_secretbox_easy(SOAUTH.sodium.from_string(message), nonce, key);
+  const ciphertextHex = SOAUTH.sodium.to_hex(ciphertext);
+  const nonceHex = SOAUTH.sodium.to_hex(nonce);
+  const boxed = ciphertextHex + "," + nonceHex;
+
   if (manual) {
-    return store;
+    return boxed;
   } else {
-    localStorage.setItem('soauth-' + SOAUTH.hostSignPublicKey, JSON.stringify(store));
+    localStorage.setItem('soauth-' + SOAUTH.hostSignPublicKey, boxed);
   }
 }
 
-export const load = async function (options = {}, data = false) {
+export const load = async function (secret, options = {}, data = false) {
   if (!options.hostSignPublicKey) {
     throw new Error("Expecting host signature public key in options");
   }
@@ -330,7 +344,15 @@ export const load = async function (options = {}, data = false) {
       return false;
     }
 
-    data = JSON.parse(data);
+    const splitBoxed = data.split(",");
+    const ciphertextHex = splitBoxed[0];
+    const ciphertext = SOAUTH.sodium.from_hex(ciphertextHex);
+    const nonceHex = splitBoxed[1];
+    const nonce = SOAUTH.sodium.from_hex(nonceHex);
+    const { key } = await keygen(secret);
+
+    data = await SOAUTH.sodium.crypto_secretbox_open_easy(ciphertext, nonce, key);
+    data = JSON.parse(SOAUTH.sodium.to_string(data));
   }
 
   if (

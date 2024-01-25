@@ -121,6 +121,22 @@ const response = await soauth.negotiate('login', credential, '/negotiate', meta 
 if (response) {
   const hostReply = await soauth.exchange("Hello host", '/human');
 }
+
+// To persist data on reload
+const secret = "secret";
+await soauth.save(secret);
+
+// After page load
+const secret = "secret";
+await soauth.load(secret, {
+    hostId, hostSignPublicKey, hostEndpoint, webgl,
+    expired_callback: function () {
+      window.location.reload();
+    }
+});
+
+// When loging out
+soauth.clear_local_storage();
 ```
 
 ### Machine example

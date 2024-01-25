@@ -57,12 +57,15 @@ window.send = async function () {
 }
 
 window.reload = async function () {
-  soauth.save();
+  const secret = "secret";
+  await soauth.save(secret);
   window.location.replace("/browser-test?reload=true")
 }
 
 if (window.location.search === '?reload=true') {
-  let loaded = await soauth.load({
+  const secret = "secret";
+
+  const loaded = await soauth.load(secret, {
     hostId, hostSignPublicKey, hostEndpoint, webgl,
     expired_callback: function () {
       window.location.reload();
@@ -70,7 +73,7 @@ if (window.location.search === '?reload=true') {
   });
 
   if (loaded) {
-    soauth.clear_local_storage();
+    // soauth.clear_local_storage();
     $('.toggle-disable').prop('disabled', false);
   } else {
     window.location.replace("/browser-test")
