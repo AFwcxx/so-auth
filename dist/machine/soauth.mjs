@@ -1,5 +1,6 @@
 "use strict";
 
+import os from 'node:os';
 import _sodium from 'libsodium-wrappers';
 
 await _sodium.ready;
@@ -113,6 +114,34 @@ export const decrypt = function (data) {
   }
 }
 
+export const fingerprint = function (raw = false) {
+  // cpu
+  const cpuData = {};
+
+  if (Array.isArray(os.cpus())) {
+    cpuData.cores = os.cpus().length;
+    cpuData.models = os.cpus().map(v => v.model);
+  }
+
+  const information = {
+    os: os.type(),
+    user: os.userInfo(),
+    architecture: os.arch(),
+    cpu: cpuData,
+    endianness: os.endianness(),
+    hostname: os.hostname(),
+    machine: os.machine(),
+    network: JSON.stringify(os.networkInterfaces()),
+    platform: os.platform(),
+    memory: os.totalmem()
+  }
+
+  if (raw) return information;
+
+  const buffer = SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_generichash_BYTES_MAX, JSON.stringify(information));
+  return SOAUTH.sodium.to_hex(buffer);
+}
+
 export default {
-  serialize_message, setup, get_pubkey, encrypt, decrypt
+  serialize_message, setup, get_pubkey, encrypt, decrypt, fingerprint
 }

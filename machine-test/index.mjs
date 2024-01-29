@@ -25,6 +25,13 @@ const options = {
   },
 };
 
+console.log("");
+console.log("NOTE:");
+console.log("We are using 'test-machine' as Fingerprint for demo purpose.");
+console.log("But we can generate a somewhat unique fingerprint with fingerprint().");
+console.log("Fingerprint", soauth.fingerprint());
+console.log("");
+
 const req = http.request(options, (res) => {
   res.setEncoding('utf8');
 
