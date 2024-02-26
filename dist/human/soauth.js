@@ -86,6 +86,10 @@ async function send_message(message, pathname = "") {
     throw new Error("Please run setup first.");
   }
 
+  if (!SOAUTH.fingerprint) {
+    throw new Error("Unable to capture device fingerprint.");
+  }
+
   message = serialize_message(message);
 
   let url = new URL(SOAUTH.hostEndpoint);
