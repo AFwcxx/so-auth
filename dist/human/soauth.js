@@ -2,6 +2,7 @@
 
 const SOAUTH_MAX_STORAGE_HOURS = 12;
 const SOAUTH_INTENTIONS = ['register', 'login'];
+const SOAUTH_CONTROLLERS = new Map();
 
 const SOAUTH = {
   _sodium: false,
@@ -81,7 +82,7 @@ async function prepare_keypairs (credential) {
   SOAUTH.boxKeypair = await SOAUTH.sodium.crypto_box_seed_keypair(SOAUTH.boxSeed);
 }
 
-async function send_message(message, pathname = "") {
+async function send_message(message, pathname = "", requestId = "") {
   if (SOAUTH.sodium === false) {
     throw new Error("Please run setup first.");
   }
@@ -95,7 +96,7 @@ async function send_message(message, pathname = "") {
   let url = new URL(SOAUTH.hostEndpoint);
   url.pathname = url.pathname.replace(/\/+$/, "") + pathname;
 
-  let response = await fetch(url.toString(), {
+  const options = {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -103,9 +104,25 @@ async function send_message(message, pathname = "") {
       'SoAuth-Fingerprint': SOAUTH.fingerprint
     },
     body: message
-  });
+  };
+
+  if (typeof requestId === "string" && requestId.trim()) {
+    const controller = new AbortController();
+    SOAUTH_CONTROLLERS.set(requestId, controller);
+    options.signal = controller.signal;
+  }
+
+  let response = await fetch(url.toString(), options);
 
   response = await response.json();
+
+  if (
+    typeof requestId === "string" 
+    && requestId.trim()
+    && SOAUTH_CONTROLLERS.has(requestId)
+  ) {
+    SOAUTH_CONTROLLERS.delete(requestId);
+  }
 
   if (
     typeof response === 'object'
@@ -122,7 +139,7 @@ async function send_message(message, pathname = "") {
   return response;
 }
 
-export const setup = async function (options = {}) {
+const setup = async function (options = {}) {
   if (
     !options.hostSignPublicKey
     || !options.hostId
@@ -145,7 +162,7 @@ export const setup = async function (options = {}) {
   }
 }
 
-export const negotiate = async function (intention, credential, pathname, meta = {}) {
+const negotiate = async function (intention, credential, pathname, meta = {}) {
   if (SOAUTH.sodium === false) {
     throw new Error("Please run setup first.");
   }
@@ -239,7 +256,7 @@ export const negotiate = async function (intention, credential, pathname, meta =
   return true;
 }
 
-export const exchange = async function (message, pathname) {
+const exchange = async function (message, pathname, requestId = "") {
   if (SOAUTH.sodium === false) {
     throw new Error("Please run setup first.");
   }
@@ -262,7 +279,7 @@ export const exchange = async function (message, pathname) {
     ciphertext: SOAUTH.sodium.to_hex(ciphertext),
     nonce: SOAUTH.sodium.to_hex(nonce),
     token: SOAUTH.token
-  }, pathname);
+  }, pathname, requestId);
 
   if (
     typeof response !== 'object'
@@ -290,13 +307,20 @@ export const exchange = async function (message, pathname) {
   }
 }
 
+function cancel_exchange(requestId) {
+  if (SOAUTH_CONTROLLERS.has(requestId)) {
+    SOAUTH_CONTROLLERS.get(requestId).abort();
+    SOAUTH_CONTROLLERS.delete(requestId);
+  }
+}
+
 const keygen = async function (secret) {
   const nonce = SOAUTH.sodium.randombytes_buf(SOAUTH.sodium.crypto_box_NONCEBYTES);
   const key = await SOAUTH.sodium.crypto_generichash(SOAUTH.sodium.crypto_secretbox_KEYBYTES, secret);
   return { key, nonce };
 }
 
-export const save = async function (secret, manual = false) {
+const save = async function (secret, manual = false) {
   if (!is_local_storage_available()) {
     manual = true;
   }
@@ -333,7 +357,7 @@ export const save = async function (secret, manual = false) {
   }
 }
 
-export const load = async function (secret, options = {}, data = false) {
+const load = async function (secret, options = {}, data = false) {
   if (!options.hostSignPublicKey) {
     throw new Error("Expecting host signature public key in options");
   }
@@ -407,7 +431,7 @@ export const load = async function (secret, options = {}, data = false) {
   return true;
 }
 
-export const clear_local_storage = function () {
+const clear_local_storage = function () {
   if (is_local_storage_available()) {
     let stored = localStorage.getItem('soauth-' + SOAUTH.hostSignPublicKey);
 
@@ -418,5 +442,5 @@ export const clear_local_storage = function () {
 }
 
 export default {
-  setup, negotiate, exchange, save, load, clear_local_storage
+  setup, negotiate, exchange, cancel_exchange, save, load, clear_local_storage
 }
