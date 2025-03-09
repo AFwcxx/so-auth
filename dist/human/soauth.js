@@ -112,31 +112,39 @@ async function send_message(message, pathname = "", requestId = "") {
     options.signal = controller.signal;
   }
 
-  let response = await fetch(url.toString(), options);
+  try {
+    let response = await fetch(url.toString(), options);
 
-  response = await response.json();
+    response = await response.json();
 
-  if (
-    typeof requestId === "string" 
-    && requestId.trim()
-    && SOAUTH_CONTROLLERS.has(requestId)
-  ) {
-    SOAUTH_CONTROLLERS.delete(requestId);
-  }
+    if (
+      typeof requestId === "string" 
+      && requestId.trim()
+      && SOAUTH_CONTROLLERS.has(requestId)
+    ) {
+      SOAUTH_CONTROLLERS.delete(requestId);
+    }
 
-  if (
-    typeof response === 'object'
-    && typeof response.message === 'string'
-    && response.message.toLowerCase().includes('expired fingerprint')
-  ) {
-    clear_local_storage();
+    if (
+      typeof response === 'object'
+      && typeof response.message === 'string'
+      && response.message.toLowerCase().includes('expired fingerprint')
+    ) {
+      clear_local_storage();
 
-    if (typeof SOAUTH.expired_callback === 'function') {
-      SOAUTH.expired_callback();
+      if (typeof SOAUTH.expired_callback === 'function') {
+        SOAUTH.expired_callback();
+      }
+    }
+
+    return response;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      // Do nothing..
+    } else {
+      throw err;
     }
   }
-
-  return response;
 }
 
 const setup = async function (options = {}) {
