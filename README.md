@@ -246,6 +246,7 @@ destroy the client Box public key or re-negotiate.
 | └── machine : Source file to use as client machine on computer
 |
 ├── host-test : Test as host
+| └── private : Static resource requires token
 |
 ├── browser-test : Test as client human on browser
 |
