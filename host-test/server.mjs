@@ -2,9 +2,11 @@
 "use strict";
 
 import express from 'express';
+import path from 'path';
 import http from 'http';
 import soauth from '../dist/host/soauth.mjs';
 import cors from 'cors';
+import fs from "fs/promises";
 
 soauth.setup({
   secret: 'secret',
@@ -202,6 +204,61 @@ app.post('/machine', async (req, res, next) => {
     console.log('result', result);
 
     return res.json(soauth.encrypt(result, hostId, publicKey));
+  } catch (err) {
+    return next(err);
+  }
+});
+
+// lastly, private static files
+const PRIVATE_DIR = path.join(process.env.PWD, '/host-test/private');
+
+app.all('/private/*', async function(req, res, next) {
+  const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+  console.log('Requested for:', fullUrl);
+
+  try {
+    if (req.query.soauth !== undefined) {
+      res.locals.token = req.query.soauth;
+    } else if (req.params.soauth !== undefined) {
+      res.locals.token = req.params.soauth;
+    }
+
+    //  Check if the token is valid
+    if (!res.locals.token) {
+      return next(new Error('Invalid access.'));
+    }
+
+    const foundHumanDataIndex = humanData.findIndex(item => { return item.token === res.locals.token });
+
+    if (foundHumanDataIndex === -1) {
+      throw new Error("Invalid token.");
+    }
+
+    const relativePath = req.params[0] || "";
+
+    const safePath = path
+      .normalize(relativePath)
+      .replace(/^(\.\.(\/|\\|$))+/, "");
+
+    const filePath = path.join(PRIVATE_DIR, safePath);
+
+    if (!filePath.startsWith(PRIVATE_DIR)) {
+      return res.status(400).send("Invalid file path");
+    }
+
+    console.log("File Path:", filePath);
+
+    const stats = await fs.stat(filePath).catch(() => null);
+    if (!stats || !stats.isFile()) {
+      return res.status(404).send("File not found");
+    }
+
+    return res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error("Error sending file:", err);
+        res.status(500).send("Server error");
+      }
+    });
   } catch (err) {
     return next(err);
   }

@@ -261,7 +261,7 @@ const negotiate = async function (intention, credential, pathname, meta = {}) {
   SOAUTH.hostBoxPublicKey = SOAUTH.sodium.from_hex(data.boxPublicKey);
   SOAUTH.token = data.token;
 
-  return true;
+  return data.token;
 }
 
 const exchange = async function (message, pathname, requestId = "") {

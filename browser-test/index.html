@@ -22,13 +22,21 @@
       <br>
       <br>
 
-      <textarea rows="3" id="message" disabled="true" class="toggle-disable"></textarea>
-      <br>
-      <button onclick="send()" disabled="true" class="toggle-disable">Send</button>
+      <div class="toggle-display" style="display: none;">
+        <textarea rows="3" id="message" disabled="true" class="toggle-disable"></textarea>
+        <br>
+        <button onclick="send()" disabled="true" class="toggle-disable">Send</button>
+
+        <br>
+        <p>Server received:</p>
+        <textarea rows="3" id="server" readonly></textarea>
+      </div>
 
       <br>
-      <p>Server received:</p>
-      <textarea rows="3" id="server" readonly></textarea>
+      <br>
+
+      <p>Secret resource:</p>
+      <img id="secret-resource" height="300px" src="http://127.0.0.1:3000/private/secret-map.jpg"/>
     </form>
 
     <script src="https://code.jquery.com/jquery-3.7.1.slim.min.js"></script>

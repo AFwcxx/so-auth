@@ -32,11 +32,14 @@ window.login = async function () {
   const password = $('#password').val();
   
   try {
-    const response = await soauth.negotiate('login', { username, password }, '/negotiate', { username });
-    console.log('response', response);
+    const token = await soauth.negotiate('login', { username, password }, '/negotiate', { username });
+    console.log('token', token);
 
-    if (response === true) {
+    if (token) {
       $('.toggle-disable').prop('disabled', false);
+      $('.toggle-display').removeAttr('style');
+
+      $('#secret-resource').attr('src',`${hostEndpoint}/private/secret-map.jpg?soauth=${token}`)
     } else {
       $('.toggle-disable').prop('disabled', true);
     }
